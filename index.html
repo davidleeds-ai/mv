@@ -1,0 +1,1460 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0}[hidden]{display:none!important}</style><title>Spectrum Video Maker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700;800&family=Share+Tech+Mono&display=swap">
+<style>
+/* Layout: a hi-fi rack workbench. Left, the stage canvas where the analyzer quad is aligned and the result previewed; right, grouped controls. On phones the stage comes first, controls below. */
+:root{
+  --chassis:#0b0c0d; --panel:#141618; --panel-2:#1a1d20; --edge:#2a2e32;
+  --ink:#dedbd2; --ink-dim:#8b8f93; --amber:#f2a516;
+  --led-g:#46ff3e; --led-c:#21deff; --led-r:#ff3b30; --led-y:#ffd60a;
+  --font-display:'Barlow Condensed','Arial Narrow',Impact,sans-serif;
+  --font-mono:'Share Tech Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--chassis);color:var(--ink);font-family:var(--font-display);font-size:1.05rem;
+  padding-block:18px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.app{max-width:1120px;margin:0 auto;display:grid;gap:18px;grid-template-columns:minmax(0,1fr);align-items:start}
+@media(min-width:900px){.app{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.ctrl{order:1}.stage{order:2;position:sticky;top:12px}}
+.head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;grid-column:1/-1}
+.tag{background:var(--led-c);color:#031418;font-weight:800;letter-spacing:.06em;padding:2px 10px;font-size:1.05rem;border-radius:2px}
+h1{margin:0;font-size:1.7rem;font-weight:800;letter-spacing:.02em;text-wrap:balance}
+h2{margin:0 0 2px;font-size:1.05rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--led-c)}
+.sub{color:var(--ink-dim);font-family:var(--font-mono);font-size:.8rem}
+.stage{min-width:0;display:grid;gap:10px}
+.stagebox{position:relative;background:#000;border:1px solid var(--edge);border-radius:4px;display:grid;place-items:center;min-height:200px;overflow:hidden}
+canvas#cv{display:block;max-width:100%;max-height:68vh;width:auto;height:auto;touch-action:none;cursor:crosshair}
+.ph{position:absolute;inset:0;display:grid;place-items:center;color:var(--ink-dim);font-family:var(--font-mono);text-align:center;padding:20px;pointer-events:none}
+.transport{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+.play{width:48px;height:48px;border-radius:50%;border:2px solid #3a3f44;background:radial-gradient(circle at 35% 30%,#2b2f33,#0f1113);color:var(--ink);cursor:pointer;display:grid;place-items:center}
+.play:hover:not(:disabled){border-color:var(--led-c)}.play:disabled{opacity:.45;cursor:default}
+.play svg{width:20px;height:20px;fill:currentColor}.play .p{display:none}.playing .play .p{display:block}.playing .play .s{display:none}
+.time{font-family:var(--font-mono);color:var(--led-g);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:.9rem}
+.hint{font-family:var(--font-mono);font-size:.78rem;color:var(--ink-dim);line-height:1.5}
+.ctrl{min-width:0;display:grid;gap:12px}
+.grp{background:var(--panel);border:1px solid var(--edge);border-radius:4px;padding:12px 14px;display:grid;gap:10px;min-width:0}
+.f{display:grid;gap:4px;font-family:var(--font-mono);font-size:.82rem;color:var(--ink-dim);min-width:0}
+.f .v{color:var(--led-g)}
+.f>span.lab{display:flex;justify-content:space-between;gap:8px}
+select,input[type=text],input[type=number]{background:#0d0f10;color:var(--ink);border:1px solid var(--edge);border-radius:3px;padding:7px 8px;font:inherit;font-family:var(--font-mono);font-size:.9rem;min-width:0;width:100%}
+select:focus-visible,input:focus-visible,.btn:focus-visible,.play:focus-visible,.filebtn:focus-within{outline:2px solid var(--led-c);outline-offset:2px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:26px;background:transparent;margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:6px;background:#07090a;border:1px solid #000;border-radius:3px}
+input[type=range]::-moz-range-track{height:6px;background:#07090a;border:1px solid #000;border-radius:3px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:26px;margin-top:-11px;border-radius:2px;background:linear-gradient(#3b4045,#16181a);border:1px solid #000;border-top:3px solid var(--led-r)}
+input[type=range]::-moz-range-thumb{width:16px;height:24px;border-radius:2px;background:linear-gradient(#3b4045,#16181a);border:1px solid #000;border-top:3px solid var(--led-r)}
+.chk{display:flex;gap:8px;align-items:center;font-family:var(--font-mono);font-size:.85rem;color:var(--ink);cursor:pointer}
+.chk input{width:18px;height:18px;accent-color:var(--led-g)}
+.btn,.filebtn{background:var(--panel-2);border:1px solid #3a3f44;color:var(--ink);font-family:var(--font-mono);font-size:.85rem;padding:8px 12px;border-radius:3px;cursor:pointer;text-align:center;box-shadow:0 2px 0 #000}
+.btn:hover:not(:disabled),.filebtn:hover{border-color:var(--led-c)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.go{background:var(--led-g);color:#041003;border-color:#2c9a26;font-weight:700;font-size:1rem;padding:11px 14px}
+.btn.go:disabled{background:#1d3a1b;color:#5a7a58}
+.btn.stop{border-color:var(--led-r);color:var(--led-r)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row>*{flex:1 1 0;min-width:0}
+.filebtn{display:block;position:relative}
+.filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.fname{font-family:var(--font-mono);font-size:.78rem;color:var(--amber);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-height:1.2em}
+.arrows{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.info{font-family:var(--font-mono);font-size:.78rem;color:var(--ink-dim);line-height:1.55;white-space:pre-wrap;word-break:break-word;background:#0d0f10;border:1px solid var(--edge);border-radius:3px;padding:8px;max-height:150px;overflow:auto}
+progress{width:100%;height:12px;accent-color:var(--led-g)}
+.status{font-family:var(--font-mono);font-size:.85rem;color:var(--amber);min-height:1.3em;word-break:break-word}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+
+<main class="app">
+  <div class="head"><span class="tag">RA-990</span><h1>Spectrum Video Maker</h1>
+    <select id="selLang" aria-label="Language" style="margin-left:auto;width:auto"><option value="ko">한국어</option><option value="en">English</option><option value="ja">日本語</option><option value="zh">中文</option><option value="es">Español</option></select>
+    <span class="sub">음악 + 배경 이미지 → 스펙트럼과 자막이 있는 MP4</span></div>
+
+  <section class="stage" id="stage">
+    <div class="stagebox">
+      <canvas id="cv" width="540" height="960" aria-label="영상 미리보기"></canvas>
+      <div class="ph" id="ph">배경 이미지를 선택하면<br>여기에 미리보기가 나타납니다</div>
+    </div>
+    <div class="transport" id="transport">
+      <button class="play" id="play" type="button" aria-label="재생 또는 일시정지" disabled>
+        <svg class="s" viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z"/></svg>
+        <svg class="p" viewBox="0 0 24 24"><path d="M6 4.5h4.5v15H6zm7.5 0H18v15h-4.5z"/></svg>
+      </button>
+      <input type="range" id="seek" min="0" max="1000" value="0" aria-label="재생 위치" disabled>
+      <span class="time" id="time">00:00 / 00:00</span>
+    </div>
+    <div class="hint">점을 끌어 영역을 맞추세요 (노란색 = 막대, 하늘색 = VU 미터, 주황색 = 스피커). 끄는 동안 원본 사진과 확대경이 나타납니다. 안쪽을 끌면 이동, 막대는 빈 곳을 끌면 새 사각형이 만들어집니다.</div>
+  </section>
+
+  <section class="ctrl">
+    <div class="grp">
+      <h2>파일</h2>
+      <label class="filebtn">음악 선택 (mp3, m4a, wav …)<input type="file" id="fAudio" accept="audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.opus"></label>
+      <div class="fname" id="nAudio">선택 안 됨</div>
+      <label class="filebtn">배경 이미지 선택<input type="file" id="fImage" accept="image/*"></label>
+      <div class="fname" id="nImage">선택 안 됨</div>
+      <label class="f"><span class="lab">영상 제목 (화면과 파일 이름에 쓰입니다)</span><input type="text" id="inTitle" maxlength="80" placeholder="SONG TITLE" autocomplete="off"></label>
+    </div>
+
+    <div class="grp">
+      <h2>화면과 막대</h2>
+      <label class="f"><span class="lab">영상 크기</span>
+        <select id="selSize"><option value="portrait">세로 9:16 (1080×1920)</option><option value="landscape">가로 16:9 (1920×1080)</option><option value="square">정사각형 1:1 (1080×1080)</option></select></label>
+      <label class="f"><span class="lab">막대 색</span>
+        <select id="selPalette"><option value="0">Hi-fi (초록/하늘/파랑)</option><option value="1">Fire (노랑/빨강)</option><option value="2">Neon (분홍/보라)</option><option value="3">Ice (흰색/파랑)</option><option value="4">McIntosh (하늘 → 초록 → 노랑 → 빨강)</option></select></label>
+      <label class="f"><span class="lab">막대 개수<span class="v" id="vBars">8</span></span><input type="range" id="rngBars" min="4" max="32" value="8"></label>
+      <label class="f"><span class="lab">이미지 위치<span class="v" id="vOff">50%</span></span><input type="range" id="rngOff" min="0" max="100" value="50"></label>
+      <label class="chk"><input type="checkbox" id="chkErase" checked>원래 있던 막대를 어둡게 가리기</label>
+      <label class="chk"><input type="checkbox" id="chkFlash" checked>킥(박자)에 화면 번쩍임</label>
+    </div>
+
+    <div class="grp">
+      <h2>효과 (VU 미터 · 스피커)</h2>
+      <label class="chk"><input type="checkbox" id="chkBars" checked>막대 스펙트럼 표시</label>
+      <label class="chk"><input type="checkbox" id="chkVu">VU 미터 바늘 (미터 창 두 곳을 맞추세요)</label>
+      <label class="chk"><input type="checkbox" id="chkSpk">스피커 진동 (스피커 중심과 크기를 맞추세요)</label>
+      <label class="f"><span class="lab">스피커 진동 세기<span class="v" id="vSpk">80%</span></span><input type="range" id="rngSpk" min="0" max="100" value="80"></label>
+      <div class="hint">VU 바늘은 사진 속 미터 창을 새 눈금판으로 덮고 그 위에서 움직입니다. 네 모서리를 각각 끌어 사진 속 미터 창의 기울기(원근)에 맞출 수 있습니다. 왼쪽 미터는 저음, 오른쪽 미터는 중·고음에 반응합니다. 스피커는 베이스(킥)가 칠 때마다 콘이 안쪽으로 울립니다.</div>
+    </div>
+
+    <div class="grp">
+      <h2>영역 맞추기</h2>
+      <label class="chk"><input type="checkbox" id="chkGuide">정렬 보기 (원본 사진 + 격자선)</label>
+      <div class="two">
+        <label class="f"><span class="lab">미세 조정 대상</span>
+          <select id="selTarget"><option value="0">막대 왼쪽 위</option><option value="1">막대 오른쪽 위</option><option value="2">막대 오른쪽 아래</option><option value="3">막대 왼쪽 아래</option><option value="4">막대 전체 이동</option><option value="5">VU 왼쪽 이동</option><option value="6">VU 오른쪽 이동</option><option value="7">스피커 이동</option></select></label>
+        <label class="f"><span class="lab">이동 단위</span>
+          <select id="selStep"><option value="1">작게</option><option value="4" selected>보통</option><option value="16">크게</option></select></label>
+      </div>
+      <div class="arrows">
+        <button class="btn" type="button" data-dx="-1" data-dy="0" aria-label="왼쪽">◀</button>
+        <button class="btn" type="button" data-dx="1" data-dy="0" aria-label="오른쪽">▶</button>
+        <button class="btn" type="button" data-dx="0" data-dy="-1" aria-label="위">▲</button>
+        <button class="btn" type="button" data-dx="0" data-dy="1" aria-label="아래">▼</button>
+      </div>
+      <div class="row">
+        <button class="btn" type="button" id="btnBigger">영역 키우기</button>
+        <button class="btn" type="button" id="btnSmaller">영역 줄이기</button>
+        <button class="btn" type="button" id="btnReset">초기화</button>
+      </div>
+      <div class="row">
+        <button class="btn" type="button" id="btnAuto">사진에서 자동으로 찾기 (막대 · VU · 스피커)</button>
+      </div>
+      <div class="hint" id="autoMsg" hidden></div>
+    </div>
+
+    <div class="grp">
+      <h2>자막</h2>
+      <label class="f"><span class="lab">자막 종류</span>
+        <select id="selStyle"><option value="rack">랙 패널 (제목 + 앞뒤 가사)</option><option value="karaoke">큰 가사 한 줄 (윤곽선)</option><option value="subtitle">영화 자막</option><option value="word">단어 하이라이트 (틱톡·쇼츠)</option><option value="label">라벨 박스 (둥근 박스)</option><option value="type">타자기 (한 글자씩)</option><option value="pop">팝업 (통통 튀며 등장)</option><option value="neon">네온 (빛나는 글씨)</option></select></label>
+      <label class="f"><span class="lab">자막 위치 (위 0% ~ 아래 100%)<span class="v" id="vPos">0%</span></span><input type="range" id="rngPos" min="0" max="100" value="0"></label>
+      <label class="f"><span class="lab">가사 뒤 어둡게 (0% = 사진 그대로)<span class="v" id="vShade">50%</span></span><input type="range" id="rngShade" min="0" max="100" value="50"></label>
+      <div class="two">
+        <label class="f"><span class="lab">글꼴</span>
+          <select id="selFont"><option value="0">고딕 굵게</option><option value="1">좁은 고딕 굵게</option><option value="2">명조 굵게</option><option value="3">고정폭 굵게</option></select></label>
+        <label class="f"><span class="lab">글자 색</span>
+          <select id="selColor"><option value="#e6e4dc">흰색</option><option value="#ffe046">노랑</option><option value="#21deff">하늘</option><option value="#46ff3e">초록</option><option value="#ff78c8">분홍</option><option value="#ff9628">주황</option></select></label>
+      </div>
+      <label class="f"><span class="lab">글자 크기<span class="v" id="vScale">100%</span></span><input type="range" id="rngScale" min="50" max="200" value="100"></label>
+      <label class="f"><span class="lab">강조 단어 (쉼표로 구분, 포함된 줄은 초록색)</span><input type="text" id="txtHot" placeholder="예: BOOM, PUNCH"></label>
+      <label class="chk"><input type="checkbox" id="chkTitle" checked>곡 제목 표시</label>
+      <label class="chk"><input type="checkbox" id="chkSection" checked>[Chorus] 같은 구간 이름 표시</label>
+      <label class="chk"><input type="checkbox" id="chkProg" checked>진행 막대와 시간 표시</label>
+    </div>
+
+    <div class="grp">
+      <h2>가사</h2>
+      <label class="f"><span class="lab">가사 출처</span>
+        <select id="selLyr"><option value="0">자동: 음악 파일 속 가사 태그</option><option value="1">가사 파일 (.srt .lrc .txt)</option><option value="2">가사 없음</option></select></label>
+      <label class="filebtn">가사 파일 선택<input type="file" id="fLyric" accept=".srt,.lrc,.txt,text/plain"></label>
+      <div class="fname" id="nLyric">선택 안 됨</div>
+      <div class="two">
+        <label class="f"><span class="lab">노래 시작(초)</span><input type="number" id="t0" min="0" step="0.5" placeholder="비우면 처음"></label>
+        <label class="f"><span class="lab">노래 끝(초)</span><input type="number" id="t1" min="0" step="0.5" placeholder="비우면 끝"></label>
+      </div>
+      <div class="hint">타이밍 없는 가사는 곡 길이에 맞춰 균등 배분됩니다. 시작·끝 초를 알면 입력하세요.</div>
+      <div class="info" id="lyrInfo">가사를 읽으면 여기에 결과가 표시됩니다.</div>
+    </div>
+
+    <div class="grp">
+      <h2>MP4 만들기</h2>
+      <label class="chk"><input type="checkbox" id="chkFast" checked>빠른 모드 (24fps, 2/3 해상도)</label>
+      <div class="row">
+        <button class="btn go" type="button" id="btnRender" disabled>MP4 만들기</button>
+        <button class="btn stop" type="button" id="btnCancel" disabled>취소</button>
+      </div>
+      <progress id="prog" max="1000" value="0"></progress>
+      <div class="status" id="status">음악과 이미지를 선택하세요</div>
+      <button class="btn" type="button" id="btnSave" hidden>완성된 영상 저장</button>
+      <div class="hint">만드는 동안 이 탭을 열어 두세요. 최신 Chrome/Edge에서는 실시간보다 빠르게 만들고, 그렇지 않은 브라우저에서는 곡 길이만큼 걸립니다.</div>
+    </div>
+  </section>
+</main>
+
+<script>
+const I18N={"en": {"단어 하이라이트 (틱톡·쇼츠)":"Word highlight (TikTok/Shorts)","라벨 박스 (둥근 박스)":"Label box (rounded)","타자기 (한 글자씩)":"Typewriter (letter by letter)","팝업 (통통 튀며 등장)":"Pop-in (bouncy)","음악 + 배경 이미지 → 스펙트럼과 자막이 있는 MP4": "Music + background image → MP4 with spectrum and lyrics", "배경 이미지를 선택하면": "Choose a background image", "여기에 미리보기가 나타납니다": "and the preview appears here", "점을 끌어 영역을 맞추세요 (노란색 = 막대, 하늘색 = VU 미터, 주황색 = 스피커). 끄는 동안 원본 사진과 확대경이 나타납니다. 안쪽을 끌면 이동, 막대는 빈 곳을 끌면 새 사각형이 만들어집니다.": "Drag the dots to fit each area (yellow = bars, cyan = VU meters, orange = speaker). The original photo and a magnifier appear while dragging. Drag inside a shape to move it; dragging an empty spot draws a new bar rectangle.", "파일": "Files", "음악 선택 (mp3, m4a, wav …)": "Choose music (mp3, m4a, wav …)", "선택 안 됨": "Nothing selected", "배경 이미지 선택": "Choose background image", "영상 제목 (화면과 파일 이름에 쓰입니다)": "Video title (shown on screen and used as file name)", "화면과 막대": "Screen & bars", "영상 크기": "Video size", "세로 9:16 (1080×1920)": "Portrait 9:16 (1080×1920)", "가로 16:9 (1920×1080)": "Landscape 16:9 (1920×1080)", "정사각형 1:1 (1080×1080)": "Square 1:1 (1080×1080)", "막대 색": "Bar colors", "Hi-fi (초록/하늘/파랑)": "Hi-fi (green/cyan/blue)", "Fire (노랑/빨강)": "Fire (yellow/red)", "Neon (분홍/보라)": "Neon (pink/purple)", "Ice (흰색/파랑)": "Ice (white/blue)", "McIntosh (하늘 → 초록 → 노랑 → 빨강)": "McIntosh (cyan → green → yellow → red)", "막대 개수": "Number of bars", "이미지 위치": "Image position", "원래 있던 막대를 어둡게 가리기": "Darken the original bars in the photo", "킥(박자)에 화면 번쩍임": "Flash the screen on kick (beat)", "효과 (VU 미터 · 스피커)": "Effects (VU meters · speaker)", "막대 스펙트럼 표시": "Show spectrum bars", "VU 미터 바늘 (미터 창 두 곳을 맞추세요)": "VU meter needles (fit the two meter windows)", "스피커 진동 (스피커 중심과 크기를 맞추세요)": "Speaker pulse (set speaker center and size)", "스피커 진동 세기": "Speaker pulse strength", "VU 바늘은 사진 속 미터 창을 새 눈금판으로 덮고 그 위에서 움직입니다. 네 모서리를 각각 끌어 사진 속 미터 창의 기울기(원근)에 맞출 수 있습니다. 왼쪽 미터는 저음, 오른쪽 미터는 중·고음에 반응합니다. 스피커는 베이스(킥)가 칠 때마다 콘이 안쪽으로 울립니다.": "The VU needles move on a new dial that covers the meter window in the photo. Drag each of the four corners to match the window's tilt (perspective). The left meter reacts to bass, the right meter to mids and highs. The speaker cone pushes inward on every bass (kick) hit.", "영역 맞추기": "Align areas", "정렬 보기 (원본 사진 + 격자선)": "Alignment view (original photo + grid)", "미세 조정 대상": "Fine-tune target", "막대 왼쪽 위": "Bars: top-left", "막대 오른쪽 위": "Bars: top-right", "막대 오른쪽 아래": "Bars: bottom-right", "막대 왼쪽 아래": "Bars: bottom-left", "막대 전체 이동": "Move all bars", "VU 왼쪽 이동": "Move left VU", "VU 오른쪽 이동": "Move right VU", "스피커 이동": "Move speaker", "이동 단위": "Step size", "작게": "Small", "보통": "Medium", "크게": "Large", "영역 키우기": "Grow area", "영역 줄이기": "Shrink area", "초기화": "Reset", "사진에서 자동으로 찾기 (막대 · VU · 스피커)": "Auto-detect from photo (bars · VU · speaker)", "자막": "Lyrics style", "자막 종류": "Lyrics style", "랙 패널 (제목 + 앞뒤 가사)": "Rack panel (title + previous/next lines)", "큰 가사 한 줄 (윤곽선)": "Big single line (outlined)", "영화 자막": "Movie subtitle", "네온 (빛나는 글씨)": "Neon (glowing text)", "자막 위치 (위 0% ~ 아래 100%)": "Lyrics position (top 0% – bottom 100%)", "가사 뒤 어둡게 (0% = 사진 그대로)": "Darken behind lyrics (0% = photo as is)", "글꼴": "Font", "고딕 굵게": "Sans bold", "좁은 고딕 굵게": "Condensed sans bold", "명조 굵게": "Serif bold", "고정폭 굵게": "Monospace bold", "글자 색": "Text color", "흰색": "White", "노랑": "Yellow", "하늘": "Cyan", "초록": "Green", "분홍": "Pink", "주황": "Orange", "글자 크기": "Text size", "강조 단어 (쉼표로 구분, 포함된 줄은 초록색)": "Highlight words (comma-separated; lines containing them turn green)", "곡 제목 표시": "Show song title", "[Chorus] 같은 구간 이름 표시": "Show section names like [Chorus]", "진행 막대와 시간 표시": "Show progress bar and time", "가사": "Lyrics", "가사 출처": "Lyrics source", "자동: 음악 파일 속 가사 태그": "Auto: lyrics tag inside the music file", "가사 파일 (.srt .lrc .txt)": "Lyrics file (.srt .lrc .txt)", "가사 없음": "No lyrics", "가사 파일 선택": "Choose lyrics file", "노래 시작(초)": "Song start (sec)", "노래 끝(초)": "Song end (sec)", "타이밍 없는 가사는 곡 길이에 맞춰 균등 배분됩니다. 시작·끝 초를 알면 입력하세요.": "Lyrics without timing are spread evenly over the song length. Enter start/end seconds if you know them.", "가사를 읽으면 여기에 결과가 표시됩니다.": "Lyrics loading results appear here.", "MP4 만들기": "Create MP4", "빠른 모드 (24fps, 2/3 해상도)": "Fast mode (24 fps, 2/3 resolution)", "취소": "Cancel", "음악과 이미지를 선택하세요": "Choose music and an image", "완성된 영상 저장": "Save finished video", "만드는 동안 이 탭을 열어 두세요. 최신 Chrome/Edge에서는 실시간보다 빠르게 만들고, 그렇지 않은 브라우저에서는 곡 길이만큼 걸립니다.": "Keep this tab open while it renders. Recent Chrome/Edge render faster than real time; other browsers take as long as the song.", "영상 미리보기": "Video preview", "재생 또는 일시정지": "Play or pause", "재생 위치": "Playback position", "왼쪽": "Left", "오른쪽": "Right", "위": "Up", "아래": "Down", "예: BOOM, PUNCH": "e.g. BOOM, PUNCH", "비우면 처음": "Empty = start", "비우면 끝": "Empty = end", "음악 파일 속 가사": "Lyrics in music file", "타이밍 있음": "timed", "타이밍 없음: 곡 길이에 맞춰 균등 배분": "no timing: spread evenly over the song", "먼저 배경 이미지를 선택하세요.": "Choose a background image first.", "막대": "bars", "VU 2개": "2 VU meters", "스피커": "speaker", "찾은 것: ": "Found: ", ". 위치가 조금 어긋나면 점을 끌어 고치세요.": ". If a position is slightly off, drag the dots to fix it.", " (못 찾은 항목은 직접 맞추세요)": " (set the items not found by hand)", "찾지 못했습니다. 직접 점을 끌어 맞추세요.": "Nothing found. Drag the dots to fit manually.", "이미지를 열 수 없습니다": "Cannot open the image", "소리 분석 중…": "Analyzing audio…", "준비 완료": "Ready", "배경 이미지를 선택하세요": "Choose a background image", "음악 읽는 중…": "Reading music…", "음악을 읽을 수 없습니다: ": "Cannot read the music: ", "가사 파일": "Lyrics file", "가사 파일을 선택하세요.": "Choose a lyrics file.", "음악 파일 속에서 가사를 찾지 못했습니다.\n.srt / .lrc / .txt 가사 파일을 \"가사 파일\"로 선택해 주세요.": "No lyrics found inside the music file.\nPick a .srt / .lrc / .txt file as the \"Lyrics file\".", "음악을 선택하면 파일 속 가사를 찾아봅니다.": "After you choose music, lyrics inside the file are searched.", "\n가사 줄 수: ": "\nLyric lines: ", "영상 만드는 중… ": "Rendering video… ", "소리 인코딩 중…": "Encoding audio…", "이 브라우저는 영상 만들기를 지원하지 않습니다. 최신 Chrome 또는 Edge를 사용하세요.": "This browser cannot create videos. Use the latest Chrome or Edge.", "영상 만드는 중 (실시간)… ": "Rendering video (real time)… ", "빠른 방식을 쓸 수 없어 실시간 방식으로 만듭니다…": "Fast method unavailable; rendering in real time…", "완료! 아래 버튼으로 저장하세요 (": "Done! Save it with the button below (", "취소되었습니다": "Cancelled", "실패: ": "Failed: ", "저장했습니다: ": "Saved: ", "저장을 취소했습니다. 버튼을 다시 눌러 저장할 수 있습니다.": "Save cancelled. Press the button again to save.", "저장할 수 없습니다 (": "Cannot save (", "저장을 시작했습니다: ": "Download started: "}, "ja": {"단어 하이라이트 (틱톡·쇼츠)":"単語ハイライト(TikTok/ショート)","라벨 박스 (둥근 박스)":"ラベルボックス(角丸)","타자기 (한 글자씩)":"タイプライター(1文字ずつ)","팝업 (통통 튀며 등장)":"ポップイン(弾んで登場)","음악 + 배경 이미지 → 스펙트럼과 자막이 있는 MP4": "音楽 + 背景画像 → スペクトラムと歌詞付きMP4", "배경 이미지를 선택하면": "背景画像を選ぶと", "여기에 미리보기가 나타납니다": "ここにプレビューが表示されます", "점을 끌어 영역을 맞추세요 (노란색 = 막대, 하늘색 = VU 미터, 주황색 = 스피커). 끄는 동안 원본 사진과 확대경이 나타납니다. 안쪽을 끌면 이동, 막대는 빈 곳을 끌면 새 사각형이 만들어집니다.": "点をドラッグして領域を合わせます(黄=バー、水色=VUメーター、橙=スピーカー)。ドラッグ中は元の写真と拡大鏡が表示されます。図形の内側をドラッグで移動、空いた場所をドラッグするとバーの新しい四角形が作れます。", "파일": "ファイル", "음악 선택 (mp3, m4a, wav …)": "音楽を選ぶ (mp3, m4a, wav …)", "선택 안 됨": "未選択", "배경 이미지 선택": "背景画像を選ぶ", "영상 제목 (화면과 파일 이름에 쓰입니다)": "動画タイトル(画面とファイル名に使われます)", "화면과 막대": "画面とバー", "영상 크기": "動画サイズ", "세로 9:16 (1080×1920)": "縦 9:16 (1080×1920)", "가로 16:9 (1920×1080)": "横 16:9 (1920×1080)", "정사각형 1:1 (1080×1080)": "正方形 1:1 (1080×1080)", "막대 색": "バーの色", "Hi-fi (초록/하늘/파랑)": "Hi-fi (緑/水色/青)", "Fire (노랑/빨강)": "Fire (黄/赤)", "Neon (분홍/보라)": "Neon (ピンク/紫)", "Ice (흰색/파랑)": "Ice (白/青)", "McIntosh (하늘 → 초록 → 노랑 → 빨강)": "McIntosh (水色→緑→黄→赤)", "막대 개수": "バーの数", "이미지 위치": "画像の位置", "원래 있던 막대를 어둡게 가리기": "元のバーを暗く隠す", "킥(박자)에 화면 번쩍임": "キック(ビート)で画面を光らせる", "효과 (VU 미터 · 스피커)": "エフェクト(VUメーター・スピーカー)", "막대 스펙트럼 표시": "バースペクトラムを表示", "VU 미터 바늘 (미터 창 두 곳을 맞추세요)": "VUメーターの針(メーター窓2か所を合わせてください)", "스피커 진동 (스피커 중심과 크기를 맞추세요)": "スピーカーの振動(中心とサイズを合わせてください)", "스피커 진동 세기": "スピーカー振動の強さ", "VU 바늘은 사진 속 미터 창을 새 눈금판으로 덮고 그 위에서 움직입니다. 네 모서리를 각각 끌어 사진 속 미터 창의 기울기(원근)에 맞출 수 있습니다. 왼쪽 미터는 저음, 오른쪽 미터는 중·고음에 반응합니다. 스피커는 베이스(킥)가 칠 때마다 콘이 안쪽으로 울립니다.": "VUの針は、写真のメーター窓を覆う新しい文字盤の上で動きます。四隅をそれぞれドラッグして、窓の傾き(遠近)に合わせられます。左のメーターは低音、右は中高音に反応します。スピーカーはベース(キック)のたびにコーンが内側に振動します。", "영역 맞추기": "領域を合わせる", "정렬 보기 (원본 사진 + 격자선)": "整列表示(元の写真 + 格子線)", "미세 조정 대상": "微調整の対象", "막대 왼쪽 위": "バー:左上", "막대 오른쪽 위": "バー:右上", "막대 오른쪽 아래": "バー:右下", "막대 왼쪽 아래": "バー:左下", "막대 전체 이동": "バー全体を移動", "VU 왼쪽 이동": "左VUを移動", "VU 오른쪽 이동": "右VUを移動", "스피커 이동": "スピーカーを移動", "이동 단위": "移動単位", "작게": "小", "보통": "中", "크게": "大", "영역 키우기": "領域を拡大", "영역 줄이기": "領域を縮小", "초기화": "リセット", "사진에서 자동으로 찾기 (막대 · VU · 스피커)": "写真から自動検出(バー・VU・スピーカー)", "자막": "歌詞表示", "자막 종류": "歌詞のスタイル", "랙 패널 (제목 + 앞뒤 가사)": "ラックパネル(タイトル + 前後の歌詞)", "큰 가사 한 줄 (윤곽선)": "大きな歌詞1行(縁取り)", "영화 자막": "映画風字幕", "네온 (빛나는 글씨)": "ネオン(光る文字)", "자막 위치 (위 0% ~ 아래 100%)": "歌詞の位置(上0%〜下100%)", "가사 뒤 어둡게 (0% = 사진 그대로)": "歌詞の背景を暗く(0% = 写真そのまま)", "글꼴": "フォント", "고딕 굵게": "ゴシック太字", "좁은 고딕 굵게": "細身ゴシック太字", "명조 굵게": "明朝太字", "고정폭 굵게": "等幅太字", "글자 색": "文字色", "흰색": "白", "노랑": "黄", "하늘": "水色", "초록": "緑", "분홍": "ピンク", "주황": "オレンジ", "글자 크기": "文字サイズ", "강조 단어 (쉼표로 구분, 포함된 줄은 초록색)": "強調する単語(カンマ区切り、含む行は緑色)", "곡 제목 표시": "曲名を表示", "[Chorus] 같은 구간 이름 표시": "[Chorus] などのセクション名を表示", "진행 막대와 시간 표시": "進行バーと時間を表示", "가사": "歌詞", "가사 출처": "歌詞の取得元", "자동: 음악 파일 속 가사 태그": "自動:音楽ファイル内の歌詞タグ", "가사 파일 (.srt .lrc .txt)": "歌詞ファイル (.srt .lrc .txt)", "가사 없음": "歌詞なし", "가사 파일 선택": "歌詞ファイルを選ぶ", "노래 시작(초)": "歌の開始(秒)", "노래 끝(초)": "歌の終了(秒)", "타이밍 없는 가사는 곡 길이에 맞춰 균등 배분됩니다. 시작·끝 초를 알면 입력하세요.": "タイミングのない歌詞は曲の長さに合わせて均等に配分されます。開始・終了秒がわかれば入力してください。", "가사를 읽으면 여기에 결과가 표시됩니다.": "歌詞を読み込むと、結果がここに表示されます。", "MP4 만들기": "MP4を作成", "빠른 모드 (24fps, 2/3 해상도)": "高速モード(24fps、解像度2/3)", "취소": "キャンセル", "음악과 이미지를 선택하세요": "音楽と画像を選んでください", "완성된 영상 저장": "完成した動画を保存", "만드는 동안 이 탭을 열어 두세요. 최신 Chrome/Edge에서는 실시간보다 빠르게 만들고, 그렇지 않은 브라우저에서는 곡 길이만큼 걸립니다.": "作成中はこのタブを開いたままにしてください。最新のChrome/Edgeではリアルタイムより速く作成され、他のブラウザでは曲の長さ分かかります。", "영상 미리보기": "動画プレビュー", "재생 또는 일시정지": "再生または一時停止", "재생 위치": "再生位置", "왼쪽": "左", "오른쪽": "右", "위": "上", "아래": "下", "예: BOOM, PUNCH": "例: BOOM, PUNCH", "비우면 처음": "空欄 = 最初", "비우면 끝": "空欄 = 最後", "음악 파일 속 가사": "音楽ファイル内の歌詞", "타이밍 있음": "タイミングあり", "타이밍 없음: 곡 길이에 맞춰 균등 배분": "タイミングなし:曲の長さに合わせて均等配分", "먼저 배경 이미지를 선택하세요.": "先に背景画像を選んでください。", "막대": "バー", "VU 2개": "VU 2つ", "스피커": "スピーカー", "찾은 것: ": "見つかったもの: ", ". 위치가 조금 어긋나면 점을 끌어 고치세요.": "。位置が少しずれていたら、点をドラッグして直してください。", " (못 찾은 항목은 직접 맞추세요)": "(見つからなかった項目は手動で合わせてください)", "찾지 못했습니다. 직접 점을 끌어 맞추세요.": "見つかりませんでした。点をドラッグして手動で合わせてください。", "이미지를 열 수 없습니다": "画像を開けません", "소리 분석 중…": "音声を解析中…", "준비 완료": "準備完了", "배경 이미지를 선택하세요": "背景画像を選んでください", "음악 읽는 중…": "音楽を読み込み中…", "음악을 읽을 수 없습니다: ": "音楽を読み込めません: ", "가사 파일": "歌詞ファイル", "가사 파일을 선택하세요.": "歌詞ファイルを選んでください。", "음악 파일 속에서 가사를 찾지 못했습니다.\n.srt / .lrc / .txt 가사 파일을 \"가사 파일\"로 선택해 주세요.": "音楽ファイル内に歌詞が見つかりませんでした。\n.srt / .lrc / .txt の歌詞ファイルを「歌詞ファイル」として選んでください。", "음악을 선택하면 파일 속 가사를 찾아봅니다.": "音楽を選ぶと、ファイル内の歌詞を探します。", "\n가사 줄 수: ": "\n歌詞の行数: ", "영상 만드는 중… ": "動画を作成中… ", "소리 인코딩 중…": "音声をエンコード中…", "이 브라우저는 영상 만들기를 지원하지 않습니다. 최신 Chrome 또는 Edge를 사용하세요.": "このブラウザは動画作成に対応していません。最新のChromeまたはEdgeをお使いください。", "영상 만드는 중 (실시간)… ": "動画を作成中(リアルタイム)… ", "빠른 방식을 쓸 수 없어 실시간 방식으로 만듭니다…": "高速方式が使えないため、リアルタイム方式で作成します…", "완료! 아래 버튼으로 저장하세요 (": "完了!下のボタンで保存してください(", "취소되었습니다": "キャンセルしました", "실패: ": "失敗: ", "저장했습니다: ": "保存しました: ", "저장을 취소했습니다. 버튼을 다시 눌러 저장할 수 있습니다.": "保存をキャンセルしました。ボタンをもう一度押すと保存できます。", "저장할 수 없습니다 (": "保存できません(", "저장을 시작했습니다: ": "保存を開始しました: "}, "zh": {"단어 하이라이트 (틱톡·쇼츠)":"单词高亮(抖音/Shorts)","라벨 박스 (둥근 박스)":"标签框(圆角)","타자기 (한 글자씩)":"打字机(逐字出现)","팝업 (통통 튀며 등장)":"弹出(弹跳出现)","음악 + 배경 이미지 → 스펙트럼과 자막이 있는 MP4": "音乐 + 背景图片 → 带频谱和歌词的MP4", "배경 이미지를 선택하면": "选择背景图片后", "여기에 미리보기가 나타납니다": "预览将显示在这里", "점을 끌어 영역을 맞추세요 (노란색 = 막대, 하늘색 = VU 미터, 주황색 = 스피커). 끄는 동안 원본 사진과 확대경이 나타납니다. 안쪽을 끌면 이동, 막대는 빈 곳을 끌면 새 사각형이 만들어집니다.": "拖动圆点来对齐区域(黄色=频谱条,青色=VU表,橙色=扬声器)。拖动时会显示原图和放大镜。拖动形状内部可移动,在空白处拖动可新建频谱条矩形。", "파일": "文件", "음악 선택 (mp3, m4a, wav …)": "选择音乐 (mp3, m4a, wav …)", "선택 안 됨": "未选择", "배경 이미지 선택": "选择背景图片", "영상 제목 (화면과 파일 이름에 쓰입니다)": "视频标题(显示在画面上并用作文件名)", "화면과 막대": "画面与频谱条", "영상 크기": "视频尺寸", "세로 9:16 (1080×1920)": "竖屏 9:16 (1080×1920)", "가로 16:9 (1920×1080)": "横屏 16:9 (1920×1080)", "정사각형 1:1 (1080×1080)": "正方形 1:1 (1080×1080)", "막대 색": "频谱条颜色", "Hi-fi (초록/하늘/파랑)": "Hi-fi (绿/青/蓝)", "Fire (노랑/빨강)": "Fire (黄/红)", "Neon (분홍/보라)": "Neon (粉/紫)", "Ice (흰색/파랑)": "Ice (白/蓝)", "McIntosh (하늘 → 초록 → 노랑 → 빨강)": "McIntosh (青→绿→黄→红)", "막대 개수": "频谱条数量", "이미지 위치": "图片位置", "원래 있던 막대를 어둡게 가리기": "遮暗照片中原有的频谱条", "킥(박자)에 화면 번쩍임": "底鼓(节拍)时画面闪烁", "효과 (VU 미터 · 스피커)": "特效(VU表 · 扬声器)", "막대 스펙트럼 표시": "显示频谱条", "VU 미터 바늘 (미터 창 두 곳을 맞추세요)": "VU表指针(请对齐两个表窗)", "스피커 진동 (스피커 중심과 크기를 맞추세요)": "扬声器震动(请设定扬声器中心和大小)", "스피커 진동 세기": "扬声器震动强度", "VU 바늘은 사진 속 미터 창을 새 눈금판으로 덮고 그 위에서 움직입니다. 네 모서리를 각각 끌어 사진 속 미터 창의 기울기(원근)에 맞출 수 있습니다. 왼쪽 미터는 저음, 오른쪽 미터는 중·고음에 반응합니다. 스피커는 베이스(킥)가 칠 때마다 콘이 안쪽으로 울립니다.": "VU指针会在覆盖照片表窗的新表盘上摆动。可分别拖动四个角,匹配表窗的倾斜(透视)。左表对低音反应,右表对中高音反应。每次低音(底鼓)时,扬声器锥盆会向内震动。", "영역 맞추기": "对齐区域", "정렬 보기 (원본 사진 + 격자선)": "对齐视图(原图 + 网格线)", "미세 조정 대상": "微调对象", "막대 왼쪽 위": "频谱条:左上", "막대 오른쪽 위": "频谱条:右上", "막대 오른쪽 아래": "频谱条:右下", "막대 왼쪽 아래": "频谱条:左下", "막대 전체 이동": "整体移动频谱条", "VU 왼쪽 이동": "移动左VU表", "VU 오른쪽 이동": "移动右VU表", "스피커 이동": "移动扬声器", "이동 단위": "移动步长", "작게": "小", "보통": "中", "크게": "大", "영역 키우기": "放大区域", "영역 줄이기": "缩小区域", "초기화": "重置", "사진에서 자동으로 찾기 (막대 · VU · 스피커)": "从照片自动识别(频谱条 · VU表 · 扬声器)", "자막": "歌词样式", "자막 종류": "歌词样式", "랙 패널 (제목 + 앞뒤 가사)": "机架面板(标题 + 前后歌词)", "큰 가사 한 줄 (윤곽선)": "大号单行歌词(描边)", "영화 자막": "电影字幕", "네온 (빛나는 글씨)": "霓虹(发光文字)", "자막 위치 (위 0% ~ 아래 100%)": "歌词位置(顶部0% ~ 底部100%)", "가사 뒤 어둡게 (0% = 사진 그대로)": "歌词背景变暗(0% = 保持原图)", "글꼴": "字体", "고딕 굵게": "黑体加粗", "좁은 고딕 굵게": "窄黑体加粗", "명조 굵게": "宋体加粗", "고정폭 굵게": "等宽加粗", "글자 색": "文字颜色", "흰색": "白色", "노랑": "黄色", "하늘": "青色", "초록": "绿色", "분홍": "粉色", "주황": "橙色", "글자 크기": "文字大小", "강조 단어 (쉼표로 구분, 포함된 줄은 초록색)": "强调词(逗号分隔,包含的行显示为绿色)", "곡 제목 표시": "显示歌曲标题", "[Chorus] 같은 구간 이름 표시": "显示 [Chorus] 等段落名称", "진행 막대와 시간 표시": "显示进度条和时间", "가사": "歌词", "가사 출처": "歌词来源", "자동: 음악 파일 속 가사 태그": "自动:音乐文件内的歌词标签", "가사 파일 (.srt .lrc .txt)": "歌词文件 (.srt .lrc .txt)", "가사 없음": "无歌词", "가사 파일 선택": "选择歌词文件", "노래 시작(초)": "歌曲开始(秒)", "노래 끝(초)": "歌曲结束(秒)", "타이밍 없는 가사는 곡 길이에 맞춰 균등 배분됩니다. 시작·끝 초를 알면 입력하세요.": "没有时间轴的歌词会按歌曲时长平均分配。如果知道开始和结束秒数,请填写。", "가사를 읽으면 여기에 결과가 표시됩니다.": "读取歌词后,结果会显示在这里。", "MP4 만들기": "生成MP4", "빠른 모드 (24fps, 2/3 해상도)": "快速模式(24fps,2/3分辨率)", "취소": "取消", "음악과 이미지를 선택하세요": "请选择音乐和图片", "완성된 영상 저장": "保存完成的视频", "만드는 동안 이 탭을 열어 두세요. 최신 Chrome/Edge에서는 실시간보다 빠르게 만들고, 그렇지 않은 브라우저에서는 곡 길이만큼 걸립니다.": "生成期间请保持此标签页打开。最新版Chrome/Edge生成速度快于实时,其他浏览器则需要与歌曲时长相同的时间。", "영상 미리보기": "视频预览", "재생 또는 일시정지": "播放或暂停", "재생 위치": "播放位置", "왼쪽": "左", "오른쪽": "右", "위": "上", "아래": "下", "예: BOOM, PUNCH": "例如: BOOM, PUNCH", "비우면 처음": "留空 = 从头", "비우면 끝": "留空 = 到结尾", "음악 파일 속 가사": "音乐文件内的歌词", "타이밍 있음": "有时间轴", "타이밍 없음: 곡 길이에 맞춰 균등 배분": "无时间轴:按歌曲时长平均分配", "먼저 배경 이미지를 선택하세요.": "请先选择背景图片。", "막대": "频谱条", "VU 2개": "2个VU表", "스피커": "扬声器", "찾은 것: ": "已找到:", ". 위치가 조금 어긋나면 점을 끌어 고치세요.": "。如果位置略有偏差,请拖动圆点修正。", " (못 찾은 항목은 직접 맞추세요)": "(未找到的项目请手动对齐)", "찾지 못했습니다. 직접 점을 끌어 맞추세요.": "未找到。请手动拖动圆点对齐。", "이미지를 열 수 없습니다": "无法打开图片", "소리 분석 중…": "正在分析音频…", "준비 완료": "准备就绪", "배경 이미지를 선택하세요": "请选择背景图片", "음악 읽는 중…": "正在读取音乐…", "음악을 읽을 수 없습니다: ": "无法读取音乐:", "가사 파일": "歌词文件", "가사 파일을 선택하세요.": "请选择歌词文件。", "음악 파일 속에서 가사를 찾지 못했습니다.\n.srt / .lrc / .txt 가사 파일을 \"가사 파일\"로 선택해 주세요.": "在音乐文件中未找到歌词。\n请选择 .srt / .lrc / .txt 歌词文件作为“歌词文件”。", "음악을 선택하면 파일 속 가사를 찾아봅니다.": "选择音乐后会查找文件内的歌词。", "\n가사 줄 수: ": "\n歌词行数:", "영상 만드는 중… ": "正在生成视频… ", "소리 인코딩 중…": "正在编码音频…", "이 브라우저는 영상 만들기를 지원하지 않습니다. 최신 Chrome 또는 Edge를 사용하세요.": "此浏览器不支持生成视频。请使用最新版Chrome或Edge。", "영상 만드는 중 (실시간)… ": "正在生成视频(实时)… ", "빠른 방식을 쓸 수 없어 실시간 방식으로 만듭니다…": "无法使用快速方式,改用实时方式生成…", "완료! 아래 버튼으로 저장하세요 (": "完成!请用下方按钮保存(", "취소되었습니다": "已取消", "실패: ": "失败:", "저장했습니다: ": "已保存:", "저장을 취소했습니다. 버튼을 다시 눌러 저장할 수 있습니다.": "已取消保存。再次点击按钮即可保存。", "저장할 수 없습니다 (": "无法保存(", "저장을 시작했습니다: ": "已开始保存:"}, "es": {"단어 하이라이트 (틱톡·쇼츠)":"Palabra resaltada (TikTok/Shorts)","라벨 박스 (둥근 박스)":"Caja de etiqueta (redondeada)","타자기 (한 글자씩)":"Máquina de escribir (letra a letra)","팝업 (통통 튀며 등장)":"Pop-in (con rebote)","음악 + 배경 이미지 → 스펙트럼과 자막이 있는 MP4": "Música + imagen de fondo → MP4 con espectro y letras", "배경 이미지를 선택하면": "Al elegir una imagen de fondo", "여기에 미리보기가 나타납니다": "la vista previa aparecerá aquí", "점을 끌어 영역을 맞추세요 (노란색 = 막대, 하늘색 = VU 미터, 주황색 = 스피커). 끄는 동안 원본 사진과 확대경이 나타납니다. 안쪽을 끌면 이동, 막대는 빈 곳을 끌면 새 사각형이 만들어집니다.": "Arrastra los puntos para ajustar cada zona (amarillo = barras, cian = vúmetros, naranja = altavoz). Mientras arrastras se muestran la foto original y una lupa. Arrastra dentro de una forma para moverla; en un espacio vacío se dibuja un nuevo rectángulo de barras.", "파일": "Archivos", "음악 선택 (mp3, m4a, wav …)": "Elegir música (mp3, m4a, wav …)", "선택 안 됨": "Nada seleccionado", "배경 이미지 선택": "Elegir imagen de fondo", "영상 제목 (화면과 파일 이름에 쓰입니다)": "Título del vídeo (se muestra en pantalla y se usa como nombre de archivo)", "화면과 막대": "Pantalla y barras", "영상 크기": "Tamaño del vídeo", "세로 9:16 (1080×1920)": "Vertical 9:16 (1080×1920)", "가로 16:9 (1920×1080)": "Horizontal 16:9 (1920×1080)", "정사각형 1:1 (1080×1080)": "Cuadrado 1:1 (1080×1080)", "막대 색": "Color de las barras", "Hi-fi (초록/하늘/파랑)": "Hi-fi (verde/cian/azul)", "Fire (노랑/빨강)": "Fire (amarillo/rojo)", "Neon (분홍/보라)": "Neon (rosa/morado)", "Ice (흰색/파랑)": "Ice (blanco/azul)", "McIntosh (하늘 → 초록 → 노랑 → 빨강)": "McIntosh (cian → verde → amarillo → rojo)", "막대 개수": "Número de barras", "이미지 위치": "Posición de la imagen", "원래 있던 막대를 어둡게 가리기": "Oscurecer las barras originales de la foto", "킥(박자)에 화면 번쩍임": "Destello de pantalla con el bombo (ritmo)", "효과 (VU 미터 · 스피커)": "Efectos (vúmetros · altavoz)", "막대 스펙트럼 표시": "Mostrar barras de espectro", "VU 미터 바늘 (미터 창 두 곳을 맞추세요)": "Agujas de vúmetro (ajusta las dos ventanas)", "스피커 진동 (스피커 중심과 크기를 맞추세요)": "Pulso del altavoz (ajusta centro y tamaño)", "스피커 진동 세기": "Intensidad del pulso del altavoz", "VU 바늘은 사진 속 미터 창을 새 눈금판으로 덮고 그 위에서 움직입니다. 네 모서리를 각각 끌어 사진 속 미터 창의 기울기(원근)에 맞출 수 있습니다. 왼쪽 미터는 저음, 오른쪽 미터는 중·고음에 반응합니다. 스피커는 베이스(킥)가 칠 때마다 콘이 안쪽으로 울립니다.": "Las agujas se mueven sobre una nueva esfera que cubre la ventana del vúmetro de la foto. Arrastra cada esquina para igualar la inclinación (perspectiva). El vúmetro izquierdo reacciona a los graves y el derecho a medios y agudos. El cono del altavoz se hunde con cada golpe de bombo.", "영역 맞추기": "Ajustar zonas", "정렬 보기 (원본 사진 + 격자선)": "Vista de alineación (foto original + cuadrícula)", "미세 조정 대상": "Objeto de ajuste fino", "막대 왼쪽 위": "Barras: arriba izq.", "막대 오른쪽 위": "Barras: arriba der.", "막대 오른쪽 아래": "Barras: abajo der.", "막대 왼쪽 아래": "Barras: abajo izq.", "막대 전체 이동": "Mover todas las barras", "VU 왼쪽 이동": "Mover VU izquierdo", "VU 오른쪽 이동": "Mover VU derecho", "스피커 이동": "Mover altavoz", "이동 단위": "Tamaño del paso", "작게": "Pequeño", "보통": "Medio", "크게": "Grande", "영역 키우기": "Agrandar zona", "영역 줄이기": "Reducir zona", "초기화": "Restablecer", "사진에서 자동으로 찾기 (막대 · VU · 스피커)": "Detectar automáticamente en la foto (barras · VU · altavoz)", "자막": "Letras", "자막 종류": "Estilo de letras", "랙 패널 (제목 + 앞뒤 가사)": "Panel de rack (título + líneas anterior/siguiente)", "큰 가사 한 줄 (윤곽선)": "Línea grande única (con contorno)", "영화 자막": "Subtítulo de cine", "네온 (빛나는 글씨)": "Neón (texto brillante)", "자막 위치 (위 0% ~ 아래 100%)": "Posición de la letra (arriba 0% – abajo 100%)", "가사 뒤 어둡게 (0% = 사진 그대로)": "Oscurecer tras la letra (0% = foto tal cual)", "글꼴": "Fuente", "고딕 굵게": "Sans negrita", "좁은 고딕 굵게": "Sans condensada negrita", "명조 굵게": "Serif negrita", "고정폭 굵게": "Monoespaciada negrita", "글자 색": "Color del texto", "흰색": "Blanco", "노랑": "Amarillo", "하늘": "Cian", "초록": "Verde", "분홍": "Rosa", "주황": "Naranja", "글자 크기": "Tamaño del texto", "강조 단어 (쉼표로 구분, 포함된 줄은 초록색)": "Palabras destacadas (separadas por comas; las líneas que las contienen se ponen verdes)", "곡 제목 표시": "Mostrar título de la canción", "[Chorus] 같은 구간 이름 표시": "Mostrar nombres de sección como [Chorus]", "진행 막대와 시간 표시": "Mostrar barra de progreso y tiempo", "가사": "Letra", "가사 출처": "Origen de la letra", "자동: 음악 파일 속 가사 태그": "Auto: etiqueta de letra dentro del archivo de música", "가사 파일 (.srt .lrc .txt)": "Archivo de letra (.srt .lrc .txt)", "가사 없음": "Sin letra", "가사 파일 선택": "Elegir archivo de letra", "노래 시작(초)": "Inicio de la canción (s)", "노래 끝(초)": "Fin de la canción (s)", "타이밍 없는 가사는 곡 길이에 맞춰 균등 배분됩니다. 시작·끝 초를 알면 입력하세요.": "La letra sin tiempos se reparte uniformemente según la duración. Si conoces los segundos de inicio y fin, introdúcelos.", "가사를 읽으면 여기에 결과가 표시됩니다.": "Aquí aparecerá el resultado al leer la letra.", "MP4 만들기": "Crear MP4", "빠른 모드 (24fps, 2/3 해상도)": "Modo rápido (24 fps, 2/3 de resolución)", "취소": "Cancelar", "음악과 이미지를 선택하세요": "Elige música e imagen", "완성된 영상 저장": "Guardar el vídeo terminado", "만드는 동안 이 탭을 열어 두세요. 최신 Chrome/Edge에서는 실시간보다 빠르게 만들고, 그렇지 않은 브라우저에서는 곡 길이만큼 걸립니다.": "Mantén esta pestaña abierta mientras se genera. Chrome/Edge recientes van más rápido que el tiempo real; otros navegadores tardan lo que dura la canción.", "영상 미리보기": "Vista previa del vídeo", "재생 또는 일시정지": "Reproducir o pausar", "재생 위치": "Posición de reproducción", "왼쪽": "Izquierda", "오른쪽": "Derecha", "위": "Arriba", "아래": "Abajo", "예: BOOM, PUNCH": "p. ej.: BOOM, PUNCH", "비우면 처음": "Vacío = inicio", "비우면 끝": "Vacío = final", "음악 파일 속 가사": "Letra dentro del archivo de música", "타이밍 있음": "con tiempos", "타이밍 없음: 곡 길이에 맞춰 균등 배분": "sin tiempos: repartida uniformemente", "먼저 배경 이미지를 선택하세요.": "Primero elige una imagen de fondo.", "막대": "barras", "VU 2개": "2 vúmetros", "스피커": "altavoz", "찾은 것: ": "Encontrado: ", ". 위치가 조금 어긋나면 점을 끌어 고치세요.": ". Si alguna posición no es exacta, arrastra los puntos para corregirla.", " (못 찾은 항목은 직접 맞추세요)": " (ajusta a mano lo que no se encontró)", "찾지 못했습니다. 직접 점을 끌어 맞추세요.": "No se encontró nada. Arrastra los puntos manualmente.", "이미지를 열 수 없습니다": "No se puede abrir la imagen", "소리 분석 중…": "Analizando audio…", "준비 완료": "Listo", "배경 이미지를 선택하세요": "Elige una imagen de fondo", "음악 읽는 중…": "Leyendo música…", "음악을 읽을 수 없습니다: ": "No se puede leer la música: ", "가사 파일": "Archivo de letra", "가사 파일을 선택하세요.": "Elige un archivo de letra.", "음악 파일 속에서 가사를 찾지 못했습니다.\n.srt / .lrc / .txt 가사 파일을 \"가사 파일\"로 선택해 주세요.": "No se encontró letra dentro del archivo de música.\nElige un archivo .srt / .lrc / .txt como \"Archivo de letra\".", "음악을 선택하면 파일 속 가사를 찾아봅니다.": "Al elegir música se buscará la letra dentro del archivo.", "\n가사 줄 수: ": "\nLíneas de letra: ", "영상 만드는 중… ": "Generando vídeo… ", "소리 인코딩 중…": "Codificando audio…", "이 브라우저는 영상 만들기를 지원하지 않습니다. 최신 Chrome 또는 Edge를 사용하세요.": "Este navegador no puede crear vídeos. Usa la última versión de Chrome o Edge.", "영상 만드는 중 (실시간)… ": "Generando vídeo (tiempo real)… ", "빠른 방식을 쓸 수 없어 실시간 방식으로 만듭니다…": "Método rápido no disponible; se genera en tiempo real…", "완료! 아래 버튼으로 저장하세요 (": "¡Listo! Guárdalo con el botón de abajo (", "취소되었습니다": "Cancelado", "실패: ": "Error: ", "저장했습니다: ": "Guardado: ", "저장을 취소했습니다. 버튼을 다시 눌러 저장할 수 있습니다.": "Guardado cancelado. Vuelve a pulsar el botón para guardar.", "저장할 수 없습니다 (": "No se puede guardar (", "저장을 시작했습니다: ": "Descarga iniciada: "}};
+let LANG='ko';
+const t=s=>{const d=I18N[LANG];return(d&&d[s])||s;};
+const i18nOrig=new WeakMap(),i18nAttr=new WeakMap();
+function applyLang(){
+  document.documentElement.lang=LANG;
+  const K=/[가-힣]/,w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),nodes=[];let n;
+  while(n=w.nextNode())nodes.push(n);
+  for(const n of nodes){
+    if(n.parentNode.tagName==='SCRIPT'||n.parentNode.tagName==='STYLE')continue;
+    let o=i18nOrig.get(n);
+    if(!o||n.nodeValue!==o.shown)o={ko:n.nodeValue,shown:n.nodeValue};
+    const key=o.ko.trim();
+    if(K.test(key)){n.nodeValue=o.ko.replace(key,t(key));o.shown=n.nodeValue;}
+    i18nOrig.set(n,o);
+  }
+  document.querySelectorAll('[placeholder],[aria-label]').forEach(e=>{
+    const m=i18nAttr.get(e)||{};
+    for(const a of['placeholder','aria-label']){
+      if(!e.hasAttribute(a))continue;
+      if(m[a]===undefined)m[a]=e.getAttribute(a);
+      if(K.test(m[a]))e.setAttribute(a,t(m[a]));
+    }
+    i18nAttr.set(e,m);
+  });
+}
+function initLang(){
+  let l=null;
+  try{l=localStorage.getItem('svm-lang');}catch(e){}
+  if(!l||!(l==='ko'||I18N[l])){const nl=((navigator.language||'en')+'').toLowerCase();
+    l=nl.startsWith('ko')?'ko':nl.startsWith('ja')?'ja':nl.startsWith('zh')?'zh':nl.startsWith('es')?'es':'en';}
+  LANG=l;const sel=document.getElementById('selLang');sel.value=l;
+  sel.addEventListener('change',()=>{LANG=sel.value;try{localStorage.setItem('svm-lang',LANG);}catch(e){}applyLang();
+    try{loadLyrics();}catch(e){}});
+  applyLang();
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.js"></script>
+<script>
+(()=>{
+'use strict';
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const even=x=>Math.max(2,Math.round(x/2)*2);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const mc=new MessageChannel();
+const tick=()=>new Promise(r=>{mc.port1.onmessage=()=>r();mc.port2.postMessage(0);});
+const mmss=t=>{const s=Math.max(0,t|0);return String(s/60|0).padStart(2,'0')+':'+String(s%60).padStart(2,'0');};
+
+/* ---------------------------------------------------------------- config */
+const SIZES={portrait:[1080,1920],landscape:[1920,1080],square:[1080,1080]};
+const PALETTES=[
+  [[82,255,46],[82,255,46],[46,232,255],[47,123,255]],
+  [[255,230,60],[255,140,30],[255,50,40]],
+  [[255,70,190],[170,90,255],[70,200,255]],
+  [[240,250,255],[120,200,255],[60,120,255]]];
+const FONTS=[
+  {w:'800',f:'"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif'},
+  {w:'700',f:'"Barlow Condensed","Arial Narrow","Malgun Gothic","Apple SD Gothic Neo",sans-serif'},
+  {w:'700',f:'"Batang","AppleMyungjo","Noto Serif KR",serif'},
+  {w:'700',f:'"Share Tech Mono",Consolas,"Courier New",monospace'}];
+const hasCjk=s=>/[̀-￿]/.test(s);
+const SEGS=18,FW=1000,FH=600;
+
+const O={size:'portrait',quad:null,bars:8,palette:0,style:'rack',font:0,scale:1,color:'#e6e4dc',hot:'',
+  pos:0,title:true,section:true,progress:true,erase:true,flash:true,fast:true,offset:.5,guide:false,showBars:true,vu:false,spk:false,spkAmt:.8,fx:null,shade:.5};
+
+function defaultQuad(key){
+  const [w,h]=SIZES[key];let l,t,r,b;
+  if(key==='portrait'){l=.12*w;t=.50*h;r=.88*w;b=.82*h;}
+  else if(key==='square'){l=.10*w;t=.55*h;r=.90*w;b=.90*h;}
+  else{l=.20*w;t=.10*h;r=.80*w;b=.45*h;}
+  return [[l,t],[r,t],[r,b],[l,b]];
+}
+function defaultPos(style,key){
+  if(['word','label','type','pop'].includes(style))return .8;
+  if(style==='rack')return key==='landscape'?1:0;
+  if(style==='karaoke')return .8;
+  if(style==='subtitle')return .93;
+  return .06;
+}
+function defaultFx(key){
+  const [w,h]=SIZES[key];
+  const Q=a=>a.map(p=>[p[0]*w,p[1]*h]);
+  if(key==='portrait')return {vl:Q([[.02,.20],[.365,.165],[.365,.285],[.015,.355]]),vr:Q([[.585,.12],[1,.062],[1,.17],[.585,.225]]),sp:[.51*w,.85*h,.42*w]};
+  const m=Math.min(w,h);
+  return {vl:Q([[.05,.06],[.35,.06],[.35,.28],[.05,.28]]),vr:Q([[.65,.06],[.95,.06],[.95,.28],[.65,.28]]),sp:[.5*w,.68*h,.28*m]};
+}
+function fxTracks(lvl,kick,bands,nf){
+  const vl=new Float32Array(nf),vr=new Float32Array(nf),sp=new Float32Array(nf);
+  let pl=0,ll=0,pr=0,lr=0,ps=0,ls=0;
+  const half=Math.max(1,bands>>1);
+  for(let f=0;f<nf;f++){
+    const l=lvl[f];let lo=0,hi=0;
+    for(let i=0;i<bands;i++){if(i<half)lo+=l[i];else hi+=l[i];}
+    lo/=half;hi/=Math.max(1,bands-half);
+    const tl=clamp(lo*1.35,0,1),tr=clamp(hi*1.6,0,1);
+    ll=ll*.62+(tl-pl)*.30;pl=clamp(pl+ll,0,1.08);
+    lr=lr*.62+(tr-pr)*.30;pr=clamp(pr+lr,0,1.08);
+    const bass=(l[0]+(bands>1?l[1]:l[0]))/2;
+    const ts=clamp(.55*bass+.75*kick[f],0,1);
+    ls=ls*.5+(ts-ps)*.5;ps=clamp(ps+ls,0,1);
+    vl[f]=pl;vr[f]=pr;sp[f]=ps;
+  }
+  return {vl,vr,sp};
+}
+function paletteColors(idx,n){
+  const st=PALETTES[clamp(idx,0,PALETTES.length-1)];const out=[];
+  for(let i=0;i<n;i++){
+    const t=n<=1?0:i/(n-1);const pos=t*(st.length-1);const a=Math.min(Math.floor(pos),st.length-2);const f=pos-a;
+    out.push([0,1,2].map(k=>Math.round(st[a][k]+(st[a+1][k]-st[a][k])*f)));
+  }
+  return out;
+}
+/* unit square -> quad projective map (Heckbert) */
+function homo(q){
+  const [x0,y0]=q[0],[x1,y1]=q[1],[x2,y2]=q[2],[x3,y3]=q[3];
+  const dx1=x1-x2,dx2=x3-x2,dx3=x0-x1+x2-x3,dy1=y1-y2,dy2=y3-y2,dy3=y0-y1+y2-y3;
+  let a,b,c,d,e,f,g,h;
+  if(Math.abs(dx3)<1e-6&&Math.abs(dy3)<1e-6){a=x1-x0;b=x2-x1;c=x0;d=y1-y0;e=y2-y1;f=y0;g=0;h=0;}
+  else{const den=dx1*dy2-dx2*dy1;g=(dx3*dy2-dx2*dy3)/den;h=(dx1*dy3-dx3*dy1)/den;
+    a=x1-x0+g*x1;b=x3-x0+h*x3;c=x0;d=y1-y0+g*y1;e=y3-y0+h*y3;f=y0;}
+  return (u,v)=>{const w=g*u+h*v+1;return [(a*u+b*v+c)/w,(d*u+e*v+f)/w];};
+}
+function coverDraw(g,img,W,H,off){
+  const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
+  const s=Math.max(W/iw,H/ih),dw=iw*s,dh=ih*s;
+  g.drawImage(img,-(dw-W)*off,-(dh-H)*off,dw,dh);
+}
+function rr(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
+
+/* ---------------------------------------------------------------- scene */
+function makeScene(o,W,H,img,lines,marks,title,dur){
+  const [lw,lh]=SIZES[o.size];const sx=W/lw,sy=H/lh;
+  const quad=o.quad||defaultQuad(o.size);const map=homo(quad);
+  const cols=paletteColors(o.palette,o.bars);
+  const font=FONTS[o.font];
+  const hot=o.hot.split(/[,;]/).map(s=>s.trim().toUpperCase()).filter(Boolean);
+  const style=o.style;
+  const zh=style==='rack'?(lw<lh?720:560):(style==='karaoke'||['word','label','type','pop'].includes(style))?360:style==='subtitle'?240:560;
+  const zy0=Math.round(clamp(o.pos,0,1)*(lh-zh)),zy1=zy0+zh;
+  const maxW=Math.floor(lw*((lw>lh&&(style==='rack'||style==='neon'))?.62:.88));
+  const fnt=(sz,mono)=>mono?`700 ${sz}px ${FONTS[3].f}`:`${font.w} ${sz}px ${font.f}`;
+
+  function quadPath(g,x0,y0,x1,y1){
+    const p=[map(x0/FW,y0/FH),map(x1/FW,y0/FH),map(x1/FW,y1/FH),map(x0/FW,y1/FH)];
+    g.beginPath();g.moveTo(p[0][0],p[0][1]);for(let i=1;i<4;i++)g.lineTo(p[i][0],p[i][1]);g.closePath();
+  }
+  const n=o.bars,pitch=FW/n,bw=pitch*.84,sp=FH/SEGS;
+
+  /* layers: photo, static overlay (panel, ghost, VU faces, lyric shade), then per-frame parts */
+  const fx=o.fx||defaultFx(o.size);
+  const photoC=document.createElement('canvas');photoC.width=W;photoC.height=H;
+  coverDraw(photoC.getContext('2d'),img,W,H,o.offset);
+  const ovl=document.createElement('canvas');ovl.width=W;ovl.height=H;
+  const g=ovl.getContext('2d');
+  g.save();g.scale(sx,sy);
+  if(o.showBars){
+    g.beginPath();g.moveTo(quad[0][0],quad[0][1]);for(let i=1;i<4;i++)g.lineTo(quad[i][0],quad[i][1]);g.closePath();
+    g.fillStyle=o.palette===4?`rgba(5,12,44,${(o.erase?242:150)/255})`:`rgba(20,18,16,${(o.erase?238:140)/255})`;
+    try{g.filter=`blur(${6*sx}px)`;}catch(e){}
+    g.fill();
+    g.filter='none';
+    g.fillStyle=o.palette===4?'rgba(90,120,210,.16)':'rgba(150,132,112,.18)';
+    for(let i=0;i<n;i++){const x=i*pitch+(pitch-bw)/2;
+      for(let s=0;s<SEGS;s++){const top=FH-(s+1)*sp+sp*.14;quadPath(g,x,top,x+bw,top+sp*.72);g.fill();}}
+  }
+  function geom(r){
+    const x=r[0],y=r[1],w=r[2],h=r[3],R=.94*h,px=x+w/2,py=y+h*1.12;
+    const am=Math.min(55*Math.PI/180,Math.asin(Math.min(1,w*.44/R)));
+    return {x,y,w,h,R,px,py,am};
+  }
+  const VUPOS=[[-20,0],[-10,.22],[-7,.36],[-5,.47],[-3,.6],[0,.8],[2,.92],[3,1]];
+  function drawFace(c,r){
+    const {x,y,w,h,R,px,py,am}=geom(r);const ang=v=>-am+2*am*v,top=-Math.PI/2;
+    c.save();rr(c,x,y,w,h,h*.06);c.clip();
+    const bg=c.createLinearGradient(0,y,0,y+h);bg.addColorStop(0,'#1c1406');bg.addColorStop(1,'#0a0703');
+    c.fillStyle=bg;c.fillRect(x,y,w,h);
+    const gl=c.createRadialGradient(px,y+h*.75,0,px,y+h*.75,w*.6);
+    gl.addColorStop(0,'rgba(255,190,70,.30)');gl.addColorStop(1,'rgba(255,190,70,0)');
+    c.fillStyle=gl;c.fillRect(x,y,w,h);
+    c.lineCap='butt';
+    c.lineWidth=h*.035;c.strokeStyle='#e0432b';c.beginPath();c.arc(px,py,R*.985,top+ang(.8),top+ang(1),false);c.stroke();
+    c.lineWidth=h*.012;c.strokeStyle='#e8b34a';c.beginPath();c.arc(px,py,R*.985,top+ang(0),top+ang(.8),false);c.stroke();
+    c.strokeStyle='rgba(232,179,74,.7)';c.lineWidth=h*.008;c.beginPath();
+    for(let v=0;v<=1.0001;v+=.04){const a=ang(v);
+      c.moveTo(px+Math.sin(a)*R*.94,py-Math.cos(a)*R*.94);c.lineTo(px+Math.sin(a)*R*.985,py-Math.cos(a)*R*.985);}
+    c.stroke();
+    c.textAlign='center';c.textBaseline='middle';c.font=`700 ${h*.085}px ${FONTS[3].f}`;
+    for(const [db,v] of VUPOS){const a=ang(v);
+      c.strokeStyle=db>=0?'#ff5a3c':'#f1c36a';c.lineWidth=h*.014;c.beginPath();
+      c.moveTo(px+Math.sin(a)*R*.88,py-Math.cos(a)*R*.88);c.lineTo(px+Math.sin(a)*R*.985,py-Math.cos(a)*R*.985);c.stroke();
+      c.fillStyle=db>=0?'#ff5a3c':'#f1c36a';
+      c.fillText(db>0?'+'+db:String(db),px+Math.sin(a)*R*.78,py-Math.cos(a)*R*.78);}
+    c.fillStyle='#f1c36a';c.font=`700 ${h*.2}px ${FONTS[3].f}`;c.fillText('VU',px,y+h*.66);
+    c.restore();
+    c.save();rr(c,x,y,w,h,h*.06);c.strokeStyle='rgba(0,0,0,.65)';c.lineWidth=h*.05;c.stroke();c.restore();
+  }
+  function needle(c,r,v){
+    const {x,y,w,h,R,px,py,am}=geom(r);const a=-am+2*am*clamp(v,0,1.06);
+    const ex=px+Math.sin(a)*R,ey=py-Math.cos(a)*R;
+    c.save();rr(c,x,y,w,h,h*.06);c.clip();c.lineCap='round';
+    c.strokeStyle='rgba(0,0,0,.5)';c.lineWidth=h*.024;c.beginPath();c.moveTo(px+h*.015,py+h*.015);c.lineTo(ex+h*.015,ey+h*.015);c.stroke();
+    c.strokeStyle='#f8e9bd';c.lineWidth=h*.014;c.beginPath();c.moveTo(px,py);c.lineTo(ex,ey);c.stroke();
+    c.restore();
+  }
+  function tri(c,im,s0,s1,s2,d0,d1,d2){
+    const sx1=s1[0]-s0[0],sy1=s1[1]-s0[1],sx2=s2[0]-s0[0],sy2=s2[1]-s0[1],det=sx1*sy2-sx2*sy1;
+    if(!det||![d0,d1,d2].every(d=>isFinite(d[0])&&isFinite(d[1])))return;
+    const dx1=d1[0]-d0[0],dy1=d1[1]-d0[1],dx2=d2[0]-d0[0],dy2=d2[1]-d0[1];
+    const a=(dx1*sy2-dx2*sy1)/det,b=(dy1*sy2-dy2*sy1)/det,cc=(dx2*sx1-dx1*sx2)/det,d=(dy2*sx1-dy1*sx2)/det;
+    const e=d0[0]-a*s0[0]-cc*s0[1],f=d0[1]-b*s0[0]-d*s0[1];
+    const cx=(d0[0]+d1[0]+d2[0])/3,cy=(d0[1]+d1[1]+d2[1])/3;
+    c.save();c.beginPath();
+    [d0,d1,d2].forEach((q,i)=>{const vx=q[0]-cx,vy=q[1]-cy,l=Math.hypot(vx,vy)||1,x=q[0]+vx/l*.7,y=q[1]+vy/l*.7;if(i)c.lineTo(x,y);else c.moveTo(x,y);});
+    c.closePath();c.clip();c.transform(a,b,cc,d,e,f);
+    const x0=Math.max(0,Math.floor(Math.min(s0[0],s1[0],s2[0]))-1),y0=Math.max(0,Math.floor(Math.min(s0[1],s1[1],s2[1]))-1);
+    const x1=Math.min(im.width,Math.ceil(Math.max(s0[0],s1[0],s2[0]))+1),y1=Math.min(im.height,Math.ceil(Math.max(s0[1],s1[1],s2[1]))+1);
+    if(x1>x0&&y1>y0)c.drawImage(im,x0,y0,x1-x0,y1-y0,x0,y0,x1-x0,y1-y0);
+    c.restore();
+  }
+  function warp(c,im,m,N,M){
+    const sw=im.width,sh=im.height;
+    for(let j=0;j<M;j++)for(let i=0;i<N;i++){
+      const u0=i/N,u1=(i+1)/N,v0=j/M,v1=(j+1)/M;
+      const P=[m(u0,v0),m(u1,v0),m(u1,v1),m(u0,v1)],S=[[u0*sw,v0*sh],[u1*sw,v0*sh],[u1*sw,v1*sh],[u0*sw,v1*sh]];
+      tri(c,im,S[0],S[1],S[2],P[0],P[1],P[2]);tri(c,im,S[0],S[2],S[3],P[0],P[2],P[3]);
+    }
+  }
+  function mkVu(q){
+    const fw=clamp(Math.ceil(Math.hypot(q[1][0]-q[0][0],q[1][1]-q[0][1])*sx*1.5),64,1400);
+    const fh=clamp(Math.ceil(Math.hypot(q[3][0]-q[0][0],q[3][1]-q[0][1])*sx*1.5),40,1000);
+    const nc=document.createElement('canvas');nc.width=fw;nc.height=fh;
+    return {fw,fh,map:homo(q),nc,ng:nc.getContext('2d')};
+  }
+  function needleW(c,u,v){u.ng.clearRect(0,0,u.fw,u.fh);needle(u.ng,[0,0,u.fw,u.fh],v);warp(c,u.nc,u.map,12,8);}
+  const vus=o.vu?[fx.vl,fx.vr].map(mkVu):[];
+  vus.forEach(u=>{const fc=document.createElement('canvas');fc.width=u.fw;fc.height=u.fh;drawFace(fc.getContext('2d'),[0,0,u.fw,u.fh]);warp(g,fc,u.map,12,8);});
+  const amax=(style==='rack'?.82:style==='neon'?.55:style==='karaoke'?.38:style==='label'?.2:['word','type','pop'].includes(style)?.3:0)*clamp(o.shade,0,1);
+  if(amax>0){
+    const a0=zy0>0?0:amax,a1=zy1<lh?0:amax;
+    const gr=g.createLinearGradient(0,zy0,0,zy1);
+    gr.addColorStop(0,`rgba(0,0,0,${a0})`);gr.addColorStop(.33,`rgba(0,0,0,${amax})`);
+    gr.addColorStop(.67,`rgba(0,0,0,${amax})`);gr.addColorStop(1,`rgba(0,0,0,${a1})`);
+    g.fillStyle=gr;g.fillRect(0,zy0,lw,zh);
+  }
+  g.restore();
+
+  /* speaker: a feathered, zoomed copy of the photo around the cone */
+  const SX=fx.sp[0]*sx,SY=fx.sp[1]*sy,SR=clamp(fx.sp[2]*sx,8,Math.max(W,H));
+  function mkRing(R){const d=Math.max(8,Math.ceil(2*R)),c=document.createElement('canvas');c.width=d;c.height=d;return {d,c,g:c.getContext('2d')};}
+  const ringA=o.spk?mkRing(SR):null,ringB=o.spk?mkRing(SR*.4):null;
+  function ring(c,rg,z){
+    if(!rg||z<1.002)return;
+    const d=rg.d,tg=rg.g;
+    tg.globalCompositeOperation='source-over';tg.clearRect(0,0,d,d);
+    const sw=d/z;tg.drawImage(photoC,SX-sw/2,SY-sw/2,sw,sw,0,0,d,d);
+    tg.globalCompositeOperation='destination-in';
+    const gr=tg.createRadialGradient(d/2,d/2,d*.34,d/2,d/2,d/2);
+    gr.addColorStop(0,'rgba(0,0,0,1)');gr.addColorStop(1,'rgba(0,0,0,0)');
+    tg.fillStyle=gr;tg.fillRect(0,0,d,d);
+    c.drawImage(rg.c,SX-d/2,SY-d/2);
+  }
+
+  /* bars */
+  const MC=o.palette===4;
+  const MCS=[[0,[30,200,255]],[.14,[30,200,255]],[.22,[30,205,50]],[.5,[130,225,25]],[.65,[255,225,0]],[.8,[255,140,10]],[1,[255,40,30]]];
+  function mcCol(t){
+    for(let i=1;i<MCS.length;i++){if(t<=MCS[i][0]){const a=MCS[i-1],b=MCS[i],f=(t-a[0])/(b[0]-a[0]||1);
+      return a[1].map((v,k)=>Math.round(v+(b[1][k]-v)*f));}}
+    return MCS[MCS.length-1][1];
+  }
+  const segC=Array.from({length:SEGS},(_,s)=>mcCol(s/(SEGS-1)));
+  function bars(c,lvl,peak){
+    for(let i=0;i<n;i++){
+      const on=clamp(Math.round(lvl[i]*SEGS),0,SEGS),pk=clamp(Math.round(peak[i]*SEGS),0,SEGS-1);
+      const x=i*pitch+(pitch-bw)/2,base=cols[i];
+      const col=s=>MC?segC[s]:base;
+      for(let s=0;s<on;s++){const [r,gg,b]=col(s),top=FH-(s+1)*sp+sp*.14,bot=top+sp*.72;
+        c.fillStyle=`rgba(${r},${gg},${b},.25)`;quadPath(c,x-sp*.22,top-sp*.16,x+bw+sp*.22,bot+sp*.16);c.fill();}
+      for(let s=0;s<on;s++){const [r,gg,b]=col(s),top=FH-(s+1)*sp+sp*.14,bot=top+sp*.72;
+        c.fillStyle=`rgb(${r},${gg},${b})`;quadPath(c,x,top,x+bw,bot);c.fill();
+        c.fillStyle=`rgb(${Math.min(255,r+55)},${Math.min(255,gg+55)},${Math.min(255,b+55)})`;
+        quadPath(c,x,top,x+bw,top+(bot-top)/4);c.fill();}
+      if(pk>on){const top=FH-(pk+1)*sp+sp*.14;
+        if(MC){const [r,gg,b]=segC[pk];c.fillStyle=`rgb(${r},${gg},${b})`;}else c.fillStyle='rgb(255,240,74)';
+        quadPath(c,x,top,x+bw,top+sp*.72);c.fill();}
+    }
+  }
+
+  /* text */
+  const cache=new Map();
+  function wrap(c,text,size,wmax){
+    c.font=fnt(size);
+    const words=text.split(/\s+/).filter(Boolean);const out=[];let cur='';
+    const push=w=>{
+      if(c.measureText(w).width<=wmax){cur=w;return;}
+      let part='';for(const ch of w){if(c.measureText(part+ch).width>wmax&&part){out.push(part);part=ch;}else part+=ch;}cur=part;
+    };
+    for(const w of words){
+      if(!cur){push(w);continue;}
+      const t=cur+' '+w;
+      if(c.measureText(t).width<=wmax)cur=t;else{out.push(cur);cur='';push(w);}
+    }
+    if(cur)out.push(cur);
+    return out;
+  }
+  function layout(c,text,size,wmax){
+    const key=size+'|'+wmax+'|'+text;let h=cache.get(key);if(h)return h;
+    let s=size,l=wrap(c,text,s,wmax);
+    while(l.length>2&&s>=34){s-=4;l=wrap(c,text,s,wmax);}
+    h={lines:l,size:s};cache.set(key,h);return h;
+  }
+  function centered(c,text,size,color,cy,opt){
+    opt=opt||{};const wmax=opt.wmax||maxW;
+    const t=(opt.upper===false||hasCjk(text))?text:text.toUpperCase();
+    const L=layout(c,t,size,wmax);const lhgt=L.size*1.2,tot=lhgt*L.lines.length,top=cy-tot/2;
+    c.font=fnt(L.size);c.textAlign='center';c.textBaseline='middle';
+    if(opt.box){let mw=0;for(const s of L.lines)mw=Math.max(mw,c.measureText(s).width);
+      c.fillStyle='rgba(0,0,0,.65)';rr(c,lw/2-mw/2-28,top-12,mw+56,tot+20,18);c.fill();}
+    L.lines.forEach((s,i)=>{
+      const y=top+(i+.5)*lhgt;
+      if(opt.glow){c.save();c.shadowColor=color;c.shadowBlur=L.size*.35*sx;c.fillStyle=color;c.fillText(s,lw/2,y);c.restore();}
+      if(opt.stroke){c.lineJoin='round';c.lineWidth=L.size*.09;c.strokeStyle='#000';c.strokeText(s,lw/2,y);}
+      c.fillStyle=color;c.fillText(s,lw/2,y);
+    });
+  }
+  function textAt(c,text,size,color,x,cy,opt){
+    opt=opt||{};c.font=fnt(size,opt.mono);c.textAlign=opt.align||'left';c.textBaseline='middle';
+    if(opt.stroke){c.lineJoin='round';c.lineWidth=size*.09;c.strokeStyle='#000';c.strokeText(text,x,cy);}
+    c.fillStyle=color;c.fillText(text,x,cy);
+  }
+  function dots(c,cy,color){
+    for(let k=-1;k<=1;k++){const cx=lw/2+k*70;
+      c.fillStyle=color+'59';c.beginPath();c.arc(cx,cy,24,0,7);c.fill();
+      c.fillStyle=color;c.beginPath();c.arc(cx,cy,14,0,7);c.fill();}
+  }
+  const ttl=hasCjk(title)?title:title.toUpperCase();
+
+  /* trending caption styles: word highlight, label box, typewriter, pop-in */
+  const easeBack=x=>{const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2);};
+  function fancy(c,text,mode,size,cy,col,info){
+    const u=clamp(info.u,0,1),age=Math.max(0,info.age);
+    const t=hasCjk(text)?text:text.toUpperCase();
+    const L=layout(c,t,size,maxW),fs=L.size,lh2=fs*1.28,tot=lh2*L.lines.length;
+    const accent=String(col).toLowerCase()==='#ffe046'?'#21deff':'#ffe046';
+    c.font=fnt(fs);c.textBaseline='middle';
+    const rows=L.lines.map(sr=>{let tk=sr.split(/\s+/).filter(Boolean),chunk=false;
+      if(tk.length===1&&hasCjk(tk[0])&&tk[0].length>3){tk=tk[0].match(/.{1,2}/g);chunk=true;}
+      return {tk,chunk,str:tk.join(chunk?'':' ')};});
+    const sp=c.measureText(' ').width;
+    let totalW=0;rows.forEach(r=>r.tk.forEach(w=>totalW+=w.length+1));
+    const pos=u*totalW;
+    let sc=1,alpha=1;
+    if(mode==='pop'){sc=.55+.45*easeBack(clamp(age/.3,0,1));alpha=clamp(age/.1,0,1);}
+    c.save();c.globalAlpha=alpha;c.translate(lw/2,cy);c.scale(sc,sc);
+    let cum=0,shown=Math.floor(clamp(u/.85,0,1)*rows.reduce((a,r)=>a+r.str.length,0));
+    const stroke=(txt,x,y)=>{c.lineJoin='round';c.lineWidth=fs*.1;c.strokeStyle='#000';c.strokeText(txt,x,y);};
+    rows.forEach((r,ri)=>{
+      const y=-tot/2+(ri+.5)*lh2,gap=r.chunk?0:sp+fs*.14;
+      const ws=r.tk.map(w=>c.measureText(w).width);
+      const rowW=ws.reduce((a,b)=>a+b,0)+gap*(r.tk.length-1),x0=-rowW/2;
+      if(mode==='label'){c.fillStyle='rgba(0,0,0,.6)';rr(c,x0-26,y-lh2*.5+4,rowW+52,lh2-8,fs*.3);c.fill();}
+      if(mode==='type'){
+        const n=r.str.length,vis=Math.max(0,Math.min(n,shown));shown-=n;
+        c.textAlign='left';
+        if(vis>0){const part=r.str.slice(0,vis);stroke(part,x0,y);c.fillStyle=col;c.fillText(part,x0,y);}
+        if(vis<n&&Math.floor(age*3)%2===0){const px=x0+c.measureText(r.str.slice(0,vis)).width;c.fillStyle=accent;c.fillRect(px+3,y-fs*.4,Math.max(4,fs*.06),fs*.8);}
+        return;
+      }
+      let x=x0;
+      r.tk.forEach((w,k)=>{
+        const wlen=w.length+1,act=pos>=cum&&pos<cum+wlen;cum+=wlen;
+        const wd=ws[k],cx=x+wd/2;c.textAlign='center';
+        if(mode==='word'){
+          c.save();c.translate(cx,y);const z=act?1.16:1;c.scale(z,z);
+          stroke(w,0,0);c.fillStyle=act?accent:col;c.fillText(w,0,0);c.restore();
+        }else if(mode==='label'){
+          if(act){c.fillStyle=accent;rr(c,x-14,y-lh2*.5+10,wd+28,lh2-20,fs*.22);c.fill();}
+          c.fillStyle=act?'#111':col;c.fillText(w,cx,y);
+        }else{
+          stroke(w,cx,y);c.fillStyle=col;c.fillText(w,cx,y);
+        }
+        x+=wd+gap;
+      });
+    });
+    c.restore();
+  }
+  function block(c,prev,cur,nxt,sec,hasLines,info){
+    const ts=o.scale,ks=zh/720,dim='#969a9e',green='#46ff3e';
+    const isHot=cur!=null&&hot.some(w=>cur.toUpperCase().includes(w));
+    const col=isHot?green:o.color,zy=zy0;
+    if(o.title&&style!=='rack')textAt(c,ttl,46,'#ebe8e1',60,75,{stroke:true});
+    if(style==='rack'){
+      const sm=Math.max(ks,.8);
+      if(o.title)textAt(c,ttl,46*sm,'#dedbd2',60,zy+zh*.12);
+      if(o.section&&sec)textAt(c,sec.toUpperCase(),30*sm,'#21deff',60,zy+zh*.25,{mono:true});
+      if(prev)centered(c,prev,40*ks*ts,dim,zy+zh*.36);
+      if(nxt)centered(c,nxt,40*ks*ts,dim,zy+zh*.82);
+      if(cur!=null)centered(c,cur,104*ks*ts,col,zy+zh*.59,{glow:isHot});
+      else if(hasLines)dots(c,zy+zh*.59,'#2f7bff');
+    }else if(style==='karaoke'){
+      if(cur!=null)centered(c,cur,120*ts,col,zy+zh*.5,{stroke:true,glow:isHot});
+    }else if(['word','label','type','pop'].includes(style)){
+      if(cur!=null)fancy(c,cur,style,(style==='pop'?116:style==='type'?92:100)*ts,zy+zh*.5,col,info||{u:.85,age:1});
+    }else if(style==='subtitle'){
+      if(cur!=null)centered(c,cur,54*ts,col,zy+zh*.5,{box:true,upper:false,wmax:Math.floor(lw*.82)});
+    }else{
+      if(prev)centered(c,prev,38*ts,dim,zy+zh*.17);
+      if(nxt)centered(c,nxt,38*ts,dim,zy+zh*.84);
+      if(cur!=null)centered(c,cur,100*ts,col,zy+zh*.5,{glow:true});
+      else if(hasLines)dots(c,zy+zh*.5,o.color);
+    }
+  }
+  function progress(c,t){
+    const py=style==='rack'?zy1-95:lh-100;
+    c.fillStyle='#0a0c0d';c.fillRect(60,py+30,lw-120,8);
+    const fr=clamp(t/Math.max(dur,.001),0,1);
+    c.fillStyle='#46ff3e';c.fillRect(60,py+30,(lw-120)*fr,8);
+    textAt(c,mmss(t),26,'#46ff3e',60,py+70,{mono:true});
+    textAt(c,mmss(dur),26,'#8b8f93',lw-60,py+70,{mono:true,align:'right'});
+  }
+  function lyrics(c,t){
+    if(!lines.length){block(c,'',null,'','',false);return;}
+    let idx=-1;for(let i=0;i<lines.length;i++){if(lines[i].s<=t)idx=i;else break;}
+    const inl=idx>=0&&t<lines[idx].e;let sec='';for(const m of marks){if(m.s<=t)sec=m.t;}
+    let prev,cur;
+    if(inl){prev=idx>0?lines[idx-1].t:'';cur=lines[idx].t;}else{prev=idx>=0?lines[idx].t:'';cur=null;}
+    const L0=inl?lines[idx]:null,info=L0?{u:(t-L0.s)/Math.max(.05,L0.e-L0.s),age:t-L0.s}:null;
+    block(c,prev,cur,idx+1<lines.length?lines[idx+1].t:'',sec,true,info);
+  }
+  function frame(c,t,lvl,peak,kick,f){
+    f=f||{vl:.5,vr:.5,sp:0};
+    c.drawImage(photoC,0,0);
+    if(o.spk){ring(c,ringA,1+o.spkAmt*.16*f.sp);ring(c,ringB,1+o.spkAmt*.34*f.sp);}
+    c.drawImage(ovl,0,0);
+    c.save();c.scale(sx,sy);
+    if(o.showBars){c.save();bars(c,lvl,peak);c.restore();}
+    if(vus.length){needleW(c,vus[0],f.vl);needleW(c,vus[1],f.vr);}
+    lyrics(c,t);
+    if(o.progress)progress(c,t);
+    c.restore();
+    if(o.flash&&kick>.03){c.fillStyle=`rgba(255,255,255,${Math.min(40,kick*22)/255})`;c.fillRect(0,0,W,H);}
+  }
+  function preview(c){
+    const idle=[.78,.78,.9,.72,.66,.7,.5,.4];
+    const lv=Array.from({length:n},(_,i)=>idle[clamp(Math.floor(i*idle.length/n),0,idle.length-1)]);
+    const pk=lv.map(v=>Math.min(1,v+.07));
+    c.drawImage(photoC,0,0);
+    if(o.spk){ring(c,ringA,1+o.spkAmt*.16*.6);ring(c,ringB,1+o.spkAmt*.34*.6);}
+    c.drawImage(ovl,0,0);
+    c.save();c.scale(sx,sy);
+    if(o.showBars){c.save();bars(c,lv,pk);c.restore();}
+    if(vus.length){needleW(c,vus[0],.55);needleW(c,vus[1],.64);}
+    block(c,'Previous line of the song','The line being sung now','Next line comes here','Chorus',true);
+    if(o.progress)progress(c,62);
+    c.restore();
+  }
+  return {frame,preview};
+}
+
+/* ---------------------------------------------------------------- analysis */
+class FFT{
+  constructor(n){this.n=n;this.cos=new Float32Array(n/2);this.sin=new Float32Array(n/2);this.rev=new Uint32Array(n);
+    for(let i=0;i<n/2;i++){const a=-2*Math.PI*i/n;this.cos[i]=Math.cos(a);this.sin[i]=Math.sin(a);}
+    let bits=0;while((1<<bits)<n)bits++;
+    for(let i=0;i<n;i++){let r=0,x=i;for(let b=0;b<bits;b++){r=(r<<1)|(x&1);x>>=1;}this.rev[i]=r;}}
+  run(re,im){
+    const n=this.n,rev=this.rev;
+    for(let i=0;i<n;i++){const j=rev[i];if(j>i){let t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t;}}
+    for(let size=2;size<=n;size*=2){
+      const half=size>>1,step=n/size;
+      for(let i=0;i<n;i+=size){let k=0;
+        for(let j=i;j<i+half;j++){
+          const wr=this.cos[k],wi=this.sin[k],h=j+half;
+          const tr=re[h]*wr-im[h]*wi,ti=re[h]*wi+im[h]*wr;
+          re[h]=re[j]-tr;im[h]=im[j]-ti;re[j]+=tr;im[j]+=ti;k+=step;}}
+    }
+  }
+}
+async function analyze(mono,sr,fps,nf,bands,prog){
+  const size=2048,bins=size/2+1,fft=new FFT(size);
+  const win=new Float32Array(size);
+  for(let i=0;i<size;i++)win[i]=.42-.5*Math.cos(2*Math.PI*i/(size-1))+.08*Math.cos(4*Math.PI*i/(size-1));
+  const re=new Float32Array(size),im=new Float32Array(size),prev=new Float32Array(bins),byteV=new Float32Array(bins);
+  const nyq=sr/2,ba=[],bb=[];
+  for(let i=0;i<bands;i++){
+    const f0=60*Math.pow(12000/60,i/bands),f1=60*Math.pow(12000/60,(i+1)/bands);
+    ba[i]=clamp(Math.floor(f0/nyq*bins),0,bins-2);bb[i]=Math.min(bins,Math.max(ba[i]+1,Math.ceil(f1/nyq*bins)));
+  }
+  const raw=[],bass=new Float32Array(nf);
+  for(let f=0;f<nf;f++){
+    if(f%160===0){if(prog)prog(f/nf);await tick();}
+    const start=Math.floor(f*sr/fps)-size/2;
+    for(let i=0;i<size;i++){const idx=start+i;re[i]=(idx>=0&&idx<mono.length)?mono[idx]*win[i]:0;im[i]=0;}
+    fft.run(re,im);
+    for(let k=0;k<bins;k++){
+      const m=Math.sqrt(re[k]*re[k]+im[k]*im[k])/size;
+      prev[k]=.7*prev[k]+.3*m;
+      byteV[k]=clamp((20*Math.log10(prev[k]+1e-9)+100)/70,0,1);
+    }
+    const row=new Float32Array(bands);
+    for(let i=0;i<bands;i++){let s=0;for(let k=ba[i];k<bb[i];k++)s+=byteV[k];
+      row[i]=Math.pow(s/(bb[i]-ba[i]),1.45)*(1+i*.06*8/bands);}
+    raw.push(row);
+    let bs=0;for(let k=1;k<=8;k++)bs+=byteV[k];bass[f]=bs/8;
+  }
+  for(let i=0;i<bands;i++){
+    const col=new Float32Array(nf);for(let f=0;f<nf;f++)col[f]=raw[f][i];col.sort();
+    const p=col[clamp(Math.floor(.98*(nf-1)),0,nf-1)];
+    for(let f=0;f<nf;f++)raw[f][i]=clamp(raw[f][i]/Math.max(p,1e-3)*.93,0,1);
+  }
+  const lvl=[],peak=[],l=new Float32Array(bands),pk=new Float32Array(bands),pv=new Float32Array(bands);
+  for(let f=0;f<nf;f++){
+    const a=new Float32Array(bands),b=new Float32Array(bands);
+    for(let i=0;i<bands;i++){
+      const v=raw[f][i];l[i]=v>l[i]?v:l[i]*.84+v*.16;
+      if(l[i]>=pk[i]){pk[i]=l[i];pv[i]=0;}else{pv[i]+=.0018;pk[i]=Math.max(0,pk[i]-pv[i]);}
+      a[i]=l[i];b[i]=pk[i];
+    }
+    lvl.push(a);peak.push(b);
+  }
+  const kick=new Float32Array(nf);let bavg=0,last=-9;
+  for(let f=0;f<nf;f++){
+    const t=f/fps;
+    if(bass[f]-bavg>.07&&bass[f]>.55&&t-last>.18)last=t;
+    kick[f]=Math.max(0,1-(t-last)/.24);
+    bavg=bavg*.95+bass[f]*.05;
+  }
+  const fxt=fxTracks(lvl,kick,bands,nf);
+  return {fps,bands,nf,lvl,peak,kick,vl:fxt.vl,vr:fxt.vr,sp:fxt.sp};
+}
+
+/* ---------------------------------------------------------------- lyrics */
+const isMark=s=>s.startsWith('[')&&s.endsWith(']');
+function parseSrt(text){
+  const out=[];
+  for(const block of text.replace(/\r/g,'').trim().split(/\n\s*\n/)){
+    const rows=block.split('\n');
+    for(let i=0;i<rows.length;i++){
+      const m=rows[i].trim().match(/(\d+):(\d+):(\d+)[,.](\d+)\s*-->\s*(\d+):(\d+):(\d+)[,.](\d+)/);
+      if(!m)continue;
+      const ts=(h,mi,s,ms)=>(+h)*3600+(+mi)*60+(+s)+parseInt(ms.padEnd(3,'0').slice(0,3),10)/1000;
+      out.push({s:ts(m[1],m[2],m[3],m[4]),e:ts(m[5],m[6],m[7],m[8]),t:rows.slice(i+1).map(x=>x.trim()).join(' ').trim()});
+      break;
+    }
+  }
+  return out;
+}
+function parseLrc(text){
+  const pts=[];
+  for(const r of text.replace(/\r/g,'').split('\n')){
+    const m=r.trim().match(/^\[(\d+):(\d+(?:\.\d+)?)\](.*)$/);
+    if(m)pts.push({s:(+m[1])*60+parseFloat(m[2]),t:m[3].trim()});
+  }
+  pts.sort((a,b)=>a.s-b.s);
+  return pts.map((p,i)=>({s:p.s,e:i+1<pts.length?pts[i+1].s:p.s+5,t:p.t}));
+}
+function untimed(text,t0,t1){
+  const rows=text.replace(/\r/g,'').split('\n').map(s=>s.trim()).filter(Boolean);
+  const lyr=rows.filter(r=>!isMark(r));if(!lyr.length)return [];
+  const w=lyr.map(r=>r.length+8),tot=w.reduce((a,b)=>a+b,0),span=Math.max(1,t1-t0);
+  const starts=[];let acc=0;for(const wi of w){starts.push(t0+span*acc/tot);acc+=wi;}
+  const ends=starts.slice(1).concat([t1]);const out=[];let li=0;
+  for(const r of rows){
+    if(isMark(r)){const ts=li<starts.length?starts[li]:t1;out.push({s:ts,e:ts,t:r});}
+    else{out.push({s:starts[li],e:ends[li],t:r});li++;}
+  }
+  return out;
+}
+function textToCues(text,t0,t1){
+  if(text.includes('-->')){const c=parseSrt(text);if(c.length)return {cues:c,timed:true};}
+  const l=parseLrc(text);if(l.length)return {cues:l,timed:true};
+  return {cues:untimed(text,t0,t1),timed:false};
+}
+function decodeText(buf){
+  const u=new Uint8Array(buf);
+  try{return new TextDecoder('utf-8',{fatal:true}).decode(u).replace(/^﻿/,'');}
+  catch(e){try{return new TextDecoder('euc-kr').decode(u);}catch(e2){return new TextDecoder().decode(u);}}
+}
+/* tags embedded in the audio file: ID3 (mp3) and ©lyr (m4a) */
+function decStr(b,enc){
+  if(!b.length)return '';
+  if(enc===1){let le=true,s=b;if(b.length>=2&&b[0]===0xFE&&b[1]===0xFF){le=false;s=b.subarray(2);}else if(b.length>=2&&b[0]===0xFF&&b[1]===0xFE)s=b.subarray(2);
+    return new TextDecoder(le?'utf-16le':'utf-16be').decode(s);}
+  if(enc===2)return new TextDecoder('utf-16be').decode(b);
+  if(enc===3)return new TextDecoder('utf-8').decode(b);
+  try{return new TextDecoder('utf-8',{fatal:true}).decode(b);}catch(e){return new TextDecoder('euc-kr').decode(b);}
+}
+function findTerm(b,from,enc){
+  if(enc===1||enc===2){for(let i=from;i+1<b.length;i+=2)if(b[i]===0&&b[i+1]===0)return {at:i,len:2};return {at:b.length,len:0};}
+  for(let i=from;i<b.length;i++)if(b[i]===0)return {at:i,len:1};
+  return {at:b.length,len:0};
+}
+function id3Lyrics(u){
+  if(u.length<10||u[0]!==0x49||u[1]!==0x44||u[2]!==0x33)return null;
+  const ver=u[3],ss=(o)=>((u[o]&127)<<21)|((u[o+1]&127)<<14)|((u[o+2]&127)<<7)|(u[o+3]&127);
+  const size=ss(6);let p=10;const end=Math.min(u.length,10+size);
+  if(u[5]&0x40){p+=ver===4?ss(10):(((u[10]<<24)|(u[11]<<16)|(u[12]<<8)|u[13])>>>0)+4;}
+  let text=null,cues=null;
+  while(p+10<=end){
+    const id=String.fromCharCode(u[p],u[p+1],u[p+2],u[p+3]);
+    if(!/^[A-Z0-9]{4}$/.test(id))break;
+    const fs=ver===4?ss(p+4):(((u[p+4]<<24)|(u[p+5]<<16)|(u[p+6]<<8)|u[p+7])>>>0);
+    const body=u.subarray(p+10,Math.min(u.length,p+10+fs));
+    if(id==='USLT'&&text==null&&body.length>5){
+      const enc=body[0],t=findTerm(body,4,enc);text=decStr(body.subarray(t.at+t.len),enc);
+    }else if(id==='SYLT'&&cues==null&&body.length>7&&body[4]===2){
+      const enc=body[0],d=findTerm(body,6,enc);let q=d.at+d.len;const items=[];
+      while(q<body.length){
+        const t=findTerm(body,q,enc);const s=decStr(body.subarray(q,t.at),enc);q=t.at+t.len;
+        if(q+4>body.length)break;
+        const ms=((body[q]<<24)|(body[q+1]<<16)|(body[q+2]<<8)|body[q+3])>>>0;q+=4;
+        items.push({s:ms/1000,t:s.replace(/^\n/,'').trim()});
+      }
+      const c=[];items.forEach((it,i)=>{if(it.t)c.push({s:it.s,e:i+1<items.length?items[i+1].s:it.s+4,t:it.t});});
+      if(c.length)cues=c;
+    }
+    p+=10+fs;if(fs<=0)break;
+  }
+  return {text,cues};
+}
+function mp4Lyrics(u){
+  if(u.length<16||String.fromCharCode(u[4],u[5],u[6],u[7])!=='ftyp')return null;
+  const dv=new DataView(u.buffer,u.byteOffset,u.byteLength);
+  for(let i=4;i+12<u.length;i++){
+    if(u[i]===0xA9&&u[i+1]===0x6C&&u[i+2]===0x79&&u[i+3]===0x72){
+      const j=i+4;
+      if(u[j+4]===0x64&&u[j+5]===0x61&&u[j+6]===0x74&&u[j+7]===0x61){
+        const dsz=dv.getUint32(j);return new TextDecoder('utf-8').decode(u.subarray(j+16,Math.min(u.length,j+dsz)));
+      }
+    }
+  }
+  return null;
+}
+function embeddedLyrics(buf,t0,t1){
+  const u=new Uint8Array(buf);
+  try{
+    const a=id3Lyrics(u);
+    if(a&&a.cues)return {cues:a.cues,info:t('음악 파일 속 가사')+' (ID3 SYLT, '+t('타이밍 있음')+')'};
+    if(a&&a.text&&a.text.trim()){const r=textToCues(a.text,t0,t1);
+      return {cues:r.cues,info:t('음악 파일 속 가사')+' (ID3 USLT, '+(r.timed?t('타이밍 있음'):t('타이밍 없음: 곡 길이에 맞춰 균등 배분'))+')'};}
+    const m=mp4Lyrics(u);
+    if(m&&m.trim()){const r=textToCues(m,t0,t1);
+      return {cues:r.cues,info:t('음악 파일 속 가사')+' (m4a ©lyr, '+(r.timed?t('타이밍 있음'):t('타이밍 없음: 곡 길이에 맞춰 균등 배분'))+')'};}
+  }catch(e){}
+  return {cues:[],info:''};
+}
+
+/* ---------------------------------------------------------------- app state */
+const cv=$('cv'),ctx=cv.getContext('2d');
+let img=null,imgName='',audioFile=null,audioBuf=null,mono=null,sr=44100,dur=0,title='SONG TITLE';
+let audioRaw=null,lyrFile=null,lyrText=null;
+let cues=[],lines=[],marks=[];
+let A=null,scene=null,plain=null,W=540,H=960;
+let actx=null,live=false,playing=false,src=null,startCtx=0,startT=0,curT=0,raf=0;
+let drag=null,busy=false,cancel=false,resultBlob=null,resultName='';
+
+const ac=()=>{if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();return actx;};
+const status=s=>{$('status').textContent=s;};
+const setProg=p=>{$('prog').value=Math.round(clamp(p,0,1)*1000);};
+
+const fxOf=(an,f)=>({vl:an.vl[f],vr:an.vr[f],sp:an.sp[f]});
+function fxNow(){if(!O.fx)O.fx=defaultFx(O.size);return O.fx;}
+function quadNow(){if(!O.quad)O.quad=defaultQuad(O.size);return O.quad;}
+
+/* ---------------------------------------------------------------- preview */
+function sizePreview(){
+  const [lw,lh]=SIZES[O.size];const k=900/Math.max(lw,lh);
+  W=even(lw*k);H=even(lh*k);if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}
+}
+let rbT=0;
+function schedule(){clearTimeout(rbT);rbT=setTimeout(rebuild,40);}
+function rebuild(){
+  if(!img){paint();return;}
+  sizePreview();
+  plain=document.createElement('canvas');plain.width=W;plain.height=H;
+  coverDraw(plain.getContext('2d'),img,W,H,O.offset);
+  scene=makeScene(O,W,H,img,lines,marks,title,dur||180);
+  paint();
+}
+function levelsAt(t){
+  if(!A)return null;const f=clamp(Math.floor(t*A.fps),0,A.nf-1);
+  return {l:A.lvl[f],p:A.peak[f],k:A.kick[f],fx:{vl:A.vl[f],vr:A.vr[f],sp:A.sp[f]}};
+}
+function paint(){
+  $('ph').hidden=!!img;
+  if(!img||!scene){ctx.fillStyle='#000';ctx.fillRect(0,0,cv.width,cv.height);return;}
+  const g=O.guide||!!drag;
+  if(g)ctx.drawImage(plain,0,0);
+  else{
+    const lv=live?levelsAt(curT):null;
+    if(lv)scene.frame(ctx,curT,lv.l,lv.p,lv.k,lv.fx);else scene.preview(ctx);
+  }
+  overlay(g);
+}
+function pxr(){const w=cv.clientWidth||cv.width;return cv.width/w;}
+function rectCorners(rc){return rc;}
+function dragPoint(){
+  if(!drag)return null;
+  if(drag.kind==='q')return quadNow()[drag.i];
+  if(drag.kind==='v'){const f=fxNow();return rectCorners(drag.j===0?f.vl:f.vr)[drag.i];}
+  if(drag.kind==='s'){const s=fxNow().sp;return drag.i===0?[s[0],s[1]]:[s[0]+s[2],s[1]];}
+  return null;
+}
+function overlay(g){
+  const [lw,lh]=SIZES[O.size],k=W/lw,r=pxr();
+  ctx.save();
+  if(O.showBars){
+    const q=quadNow();
+    if(g){
+      const m=homo(q.map(p=>[p[0]*k,p[1]*k]));
+      ctx.strokeStyle='rgba(0,255,255,.8)';ctx.lineWidth=1.5*r;
+      const n=O.bars;
+      for(let i=0;i<=n;i++){const a=m(i/n,0),b=m(i/n,1);ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();}
+      for(let i=0;i<=6;i++){const a=m(0,i/6),b=m(1,i/6);ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();}
+    }
+    ctx.strokeStyle='#ffd60a';ctx.lineWidth=2.5*r;ctx.beginPath();
+    q.forEach((p,i)=>{if(i)ctx.lineTo(p[0]*k,p[1]*k);else ctx.moveTo(p[0]*k,p[1]*k);});ctx.closePath();ctx.stroke();
+    ctx.fillStyle='#ffd60a';
+    q.forEach(p=>{ctx.beginPath();ctx.arc(p[0]*k,p[1]*k,8*r,0,7);ctx.fill();});
+  }
+  const f=(O.vu||O.spk)?fxNow():null;
+  if(O.vu){
+    ctx.strokeStyle='#21deff';ctx.fillStyle='#21deff';ctx.lineWidth=2.5*r;
+    [f.vl,f.vr].forEach(rc=>{ctx.beginPath();rc.forEach((p,i)=>{if(i)ctx.lineTo(p[0]*k,p[1]*k);else ctx.moveTo(p[0]*k,p[1]*k);});ctx.closePath();ctx.stroke();
+      rc.forEach(p=>{ctx.beginPath();ctx.arc(p[0]*k,p[1]*k,8*r,0,7);ctx.fill();});});
+  }
+  if(O.spk){
+    const s=f.sp;ctx.strokeStyle='#ff9628';ctx.fillStyle='#ff9628';ctx.lineWidth=2.5*r;
+    ctx.beginPath();ctx.arc(s[0]*k,s[1]*k,s[2]*k,0,7);ctx.stroke();
+    ctx.beginPath();ctx.arc(s[0]*k,s[1]*k,8*r,0,7);ctx.fill();
+    ctx.beginPath();ctx.arc((s[0]+s[2])*k,s[1]*k,8*r,0,7);ctx.fill();
+  }
+  const dp=dragPoint();if(dp&&plain)loupe(dp,k,r);
+  ctx.restore();
+}
+function loupe(c,k,r){
+  const R=70*r,z=4,cx=c[0]*k<W/2?W-R-8*r:R+8*r,cy=R+8*r;
+  ctx.save();ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.clip();
+  ctx.fillStyle='#000';ctx.fillRect(cx-R,cy-R,2*R,2*R);
+  const half=R/z;ctx.drawImage(plain,c[0]*k-half,c[1]*k-half,2*half,2*half,cx-R,cy-R,2*R,2*R);
+  ctx.restore();
+  ctx.strokeStyle='#fff';ctx.lineWidth=3*r;ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.stroke();
+  ctx.strokeStyle='#ff2828';ctx.lineWidth=1.5*r;ctx.beginPath();
+  ctx.moveTo(cx-14*r,cy);ctx.lineTo(cx+14*r,cy);ctx.moveTo(cx,cy-14*r);ctx.lineTo(cx,cy+14*r);ctx.stroke();
+}
+function inside(q,x,y){let c=false;for(let i=0,j=3;i<4;j=i++){
+  if((q[i][1]>y)!==(q[j][1]>y)&&x<(q[j][0]-q[i][0])*(y-q[i][1])/(q[j][1]-q[i][1])+q[i][0])c=!c;}return c;}
+function toLogical(e){
+  const r=cv.getBoundingClientRect(),[lw,lh]=SIZES[O.size];
+  return [clamp((e.clientX-r.left)/r.width*lw,0,lw),clamp((e.clientY-r.top)/r.height*lh,0,lh),r.width];
+}
+function hit(lx,ly,thr){
+  let best=thr,res=null;
+  const test=(x,y,d)=>{const e=Math.hypot(x-lx,y-ly);if(e<best){best=e;res=d;}};
+  if(O.showBars)quadNow().forEach((p,i)=>test(p[0],p[1],{kind:'q',i}));
+  if(O.vu){const f=fxNow();[f.vl,f.vr].forEach((rc,j)=>rectCorners(rc).forEach((p,i)=>test(p[0],p[1],{kind:'v',i,j})));}
+  if(O.spk){const s=fxNow().sp;test(s[0],s[1],{kind:'s',i:0});test(s[0]+s[2],s[1],{kind:'s',i:1});}
+  return res;
+}
+cv.addEventListener('pointerdown',e=>{
+  if(!img||busy)return;
+  const [lx,ly,rw]=toLogical(e),[lw]=SIZES[O.size];
+  let d=hit(lx,ly,34/rw*lw);
+  if(!d){
+    const f=(O.vu||O.spk)?fxNow():null;
+    if(O.showBars&&inside(quadNow(),lx,ly))d={kind:'qbody'};
+    else if(O.vu&&[f.vl,f.vr].some((rc,j)=>{const ok=inside(rc,lx,ly);if(ok)d={kind:'vbody',j};return ok;})){}
+    else if(O.spk&&Math.hypot(lx-f.sp[0],ly-f.sp[1])<=f.sp[2])d={kind:'sbody'};
+    else if(O.showBars)d={kind:'new'};
+  }
+  if(!d)return;
+  drag=d;
+  const pt=dragPoint();
+  if(pt){d.offX=pt[0]-lx;d.offY=pt[1]-ly;}
+  d.startX=d.lastX=lx;d.startY=d.lastY=ly;
+  cv.setPointerCapture(e.pointerId);paint();e.preventDefault();
+});
+cv.addEventListener('pointermove',e=>{
+  const d=drag;if(!d)return;
+  const [lx,ly]=toLogical(e),[lw,lh]=SIZES[O.size];
+  const dx0=lx-d.lastX,dy0=ly-d.lastY;
+  if(d.kind==='q'){quadNow()[d.i]=[clamp(lx+d.offX,0,lw),clamp(ly+d.offY,0,lh)];}
+  else if(d.kind==='qbody'){
+    const q=quadNow();let dx=dx0,dy=dy0;
+    for(const p of q){if(p[0]+dx<0||p[0]+dx>lw)dx=0;if(p[1]+dy<0||p[1]+dy>lh)dy=0;}
+    q.forEach(p=>{p[0]+=dx;p[1]+=dy;});
+  }else if(d.kind==='new'){
+    if(Math.abs(lx-d.startX)>20&&Math.abs(ly-d.startY)>20){
+      const l=Math.min(d.startX,lx),r=Math.max(d.startX,lx),t=Math.min(d.startY,ly),b=Math.max(d.startY,ly);
+      O.quad=[[l,t],[r,t],[r,b],[l,b]];
+    }
+  }else if(d.kind==='v'){
+    fxNow()[d.j===0?'vl':'vr'][d.i]=[clamp(lx+d.offX,0,lw),clamp(ly+d.offY,0,lh)];
+  }else if(d.kind==='vbody'){
+    const rc=fxNow()[d.j===0?'vl':'vr'];let dx=dx0,dy=dy0;
+    for(const p of rc){if(p[0]+dx<0||p[0]+dx>lw)dx=0;if(p[1]+dy<0||p[1]+dy>lh)dy=0;}
+    rc.forEach(p=>{p[0]+=dx;p[1]+=dy;});
+  }else if(d.kind==='s'){
+    const s=fxNow().sp;
+    if(d.i===0){s[0]=clamp(lx+d.offX,0,lw);s[1]=clamp(ly+d.offY,0,lh);}
+    else s[2]=Math.max(20,Math.hypot(lx-s[0],ly-s[1]));
+  }else if(d.kind==='sbody'){
+    const s=fxNow().sp;s[0]=clamp(s[0]+dx0,0,lw);s[1]=clamp(s[1]+dy0,0,lh);
+  }
+  d.lastX=lx;d.lastY=ly;paint();
+});
+const endDrag=()=>{if(drag){drag=null;rebuild();}};
+cv.addEventListener('pointerup',endDrag);cv.addEventListener('pointercancel',endDrag);
+
+function nudge(dx,dy){
+  const t=+$('selTarget').value,st=+$('selStep').value,[lw,lh]=SIZES[O.size];
+  if(t<=4){
+    const q=quadNow(),idx=t<=3?[t]:[0,1,2,3];
+    for(const i of idx)q[i]=[clamp(q[i][0]+dx*st,0,lw),clamp(q[i][1]+dy*st,0,lh)];
+  }else if(t<=6){
+    const key=t===5?'vl':'vr',rc=fxNow()[key];
+    fxNow()[key]=rc.map(p=>[clamp(p[0]+dx*st,0,lw),clamp(p[1]+dy*st,0,lh)]);
+  }else{const s=fxNow().sp;s[0]=clamp(s[0]+dx*st,0,lw);s[1]=clamp(s[1]+dy*st,0,lh);}
+  rebuild();
+}
+document.querySelectorAll('.arrows .btn').forEach(b=>b.addEventListener('click',()=>nudge(+b.dataset.dx,+b.dataset.dy)));
+function scaleTarget(f){
+  const t=+$('selTarget').value,[lw,lh]=SIZES[O.size];
+  if(t<=4){
+    const q=quadNow();
+    const cx=q.reduce((a,p)=>a+p[0],0)/4,cy=q.reduce((a,p)=>a+p[1],0)/4;
+    O.quad=q.map(p=>[clamp(cx+(p[0]-cx)*f,0,lw),clamp(cy+(p[1]-cy)*f,0,lh)]);
+  }else if(t<=6){
+    const key=t===5?'vl':'vr',rc=fxNow()[key],cx=rc.reduce((a,p)=>a+p[0],0)/4,cy=rc.reduce((a,p)=>a+p[1],0)/4;
+    fxNow()[key]=rc.map(p=>[clamp(cx+(p[0]-cx)*f,0,lw),clamp(cy+(p[1]-cy)*f,0,lh)]);
+  }else{const s=fxNow().sp;s[2]=Math.max(20,s[2]*f);}
+  rebuild();
+}
+$('btnBigger').onclick=()=>scaleTarget(1.03);
+$('btnSmaller').onclick=()=>scaleTarget(.97);
+$('btnReset').onclick=()=>{O.quad=null;O.fx=null;rebuild();};
+
+/* ---------------------------------------------------------------- auto detect */
+/* Auto-detect the spectrum display, the two VU windows and a speaker in a photo. Returns image-pixel coordinates. */
+function detectRack(img){
+  const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
+  const ds=Math.min(1,640/Math.max(iw,ih)),w=Math.max(8,Math.round(iw*ds)),h=Math.max(8,Math.round(ih*ds));
+  const c=document.createElement('canvas');c.width=w;c.height=h;
+  const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0,w,h);
+  const px=g.getImageData(0,0,w,h).data,N=w*h;
+  const H=new Float32Array(N),S=new Float32Array(N),V=new Float32Array(N),Y=new Float32Array(N);
+  for(let i=0;i<N;i++){
+    const r=px[i*4]/255,gg=px[i*4+1]/255,b=px[i*4+2]/255,mx=Math.max(r,gg,b),mn=Math.min(r,gg,b),d=mx-mn;
+    let hh=0;
+    if(d>0){if(mx===r)hh=((gg-b)/d+6)%6;else if(mx===gg)hh=(b-r)/d+2;else hh=(r-gg)/d+4;hh*=60;}
+    H[i]=hh;S[i]=mx>0?d/mx:0;V[i]=mx;Y[i]=.299*r+.587*gg+.114*b;
+  }
+  /* connected components of a mask, after growing it by `grow` pixels */
+  function comps(mask,grow){
+    const m=new Uint8Array(N);
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(mask[y*w+x]){
+      for(let dy=-grow;dy<=grow;dy++){const yy=y+dy;if(yy<0||yy>=h)continue;
+        for(let dx=-grow;dx<=grow;dx++){const xx=x+dx;if(xx<0||xx>=w)continue;m[yy*w+xx]=1;}}}
+    const lab=new Int32Array(N),out=[];let n=0;const st=[];
+    for(let i=0;i<N;i++){
+      if(!m[i]||lab[i])continue;n++;lab[i]=n;st.length=0;st.push(i);const idx=[];
+      while(st.length){const p=st.pop();idx.push(p);const x=p%w,y=(p-x)/w;
+        if(x>0&&m[p-1]&&!lab[p-1]){lab[p-1]=n;st.push(p-1);}
+        if(x<w-1&&m[p+1]&&!lab[p+1]){lab[p+1]=n;st.push(p+1);}
+        if(y>0&&m[p-w]&&!lab[p-w]){lab[p-w]=n;st.push(p-w);}
+        if(y<h-1&&m[p+w]&&!lab[p+w]){lab[p+w]=n;st.push(p+w);}}
+      const own=idx.filter(p=>mask[p]);out.push({idx:own,all:idx});
+    }
+    return out;
+  }
+  const bbox=idx=>{let x0=w,y0=h,x1=0,y1=0;for(const p of idx){const x=p%w,y=(p-x)/w;if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}return{x0,y0,x1,y1};};
+  const res={bars:null,vu:null,spk:null};
+  const inv=1/ds;
+
+  /* ---- spectrum display: a block holding green + yellow + red LEDs together */
+  const led=new Uint8Array(N);
+  for(let i=0;i<N;i++)if(S[i]>.6&&V[i]>.5&&H[i]<150)led[i]=1;
+  let best=null;
+  for(const c of comps(led,2)){
+    if(c.idx.length<60)continue;
+    let gr=0,ye=0,re=0;
+    for(const p of c.idx){const hh=H[p];if(hh>=75)gr++;else if(hh>=42)ye++;else if(hh<28)re++;}
+    const n=c.idx.length;
+    if(gr/n<.06||ye/n<.04||re/n<.02)continue;
+    const bb=bbox(c.idx);if(bb.x1-bb.x0<w*.12)continue;
+    if(!best||n>best.n)best={n,bb};
+  }
+  if(best){
+    let {x0,y0,x1,y1}=best.bb;
+    /* cyan segments below the green ones */
+    for(let k=0;k<Math.round((y1-y0)*.5);k++){
+      const y=y1+1;if(y>=h)break;let cy=0;
+      for(let x=x0;x<=x1;x++){const i=y*w+x;if(S[i]>.55&&V[i]>.45&&H[i]>=150&&H[i]<205)cy++;}
+      if(cy<3)break;y1=y;
+    }
+    /* the dark window above the tallest bar */
+    for(let k=0;k<Math.round((y1-y0)*.4);k++){
+      const y=y0-1;if(y<0)break;let dk=0;
+      for(let x=x0;x<=x1;x++)if(V[y*w+x]<.2)dk++;
+      if(dk<(x1-x0)*.7)break;y0=y;
+    }
+    const m=1.5;
+    res.bars=[[x0-m,y0-m],[x1+m,y0-m],[x1+m,y1+m],[x0-m,y1+m]].map(p=>[p[0]*inv,p[1]*inv]);
+    res._barsBox=best.bb;
+  }
+
+  /* ---- VU windows: big amber glows */
+  const amb=new Uint8Array(N);
+  for(let i=0;i<N;i++)if((H[i]>=18&&H[i]<=50||H[i]<18||H[i]>340)&&S[i]>.55&&V[i]>.28)amb[i]=1;
+  const cand=[];
+  for(const c of comps(amb,3)){
+    const bb=bbox(c.all),bw=bb.x1-bb.x0,bh=bb.y1-bb.y0;
+    if(bw<w*.1||bh<h*.015||bw/Math.max(1,bh)<1||bw/Math.max(1,bh)>4)continue;
+    if(res._barsBox){const b=res._barsBox;if(bb.x0<=b.x1&&bb.x1>=b.x0&&bb.y0<=b.y1&&bb.y1>=b.y0)continue;}
+    cand.push({n:c.idx.length,all:c.all,bb});
+  }
+  cand.sort((a,b)=>b.n-a.n);
+  if(cand.length>=2){
+    const two=cand.slice(0,2).sort((a,b)=>a.bb.x0-b.bb.x0);
+    res.vu=two.map(c=>{
+      let tl=null,tr=null,br=null,bl=null,a=1e9,b=-1e9,cc=-1e9,d=1e9;
+      for(const p of c.all){const x=p%w,y=(p-x)/w;
+        if(x+y<a){a=x+y;tl=[x,y];}if(x-y>b){b=x-y;tr=[x,y];}if(x+y>cc){cc=x+y;br=[x,y];}if(x-y<d){d=x-y;bl=[x,y];}}
+      const q=[tl,tr,br,bl],mx=q.reduce((a,p)=>a+p[0],0)/4,my=q.reduce((a,p)=>a+p[1],0)/4;
+      return q.map(p=>[(mx+(p[0]-mx)*1.06)*inv,(my+(p[1]-my)*1.06)*inv]);
+    });
+  }
+
+  /* ---- speaker: strongest circle (gradient Hough) */
+  const sm=2,gw=Math.floor(w/sm),gh=Math.floor(h/sm),GN=gw*gh,gy=new Float32Array(GN);
+  for(let y=0;y<gh;y++)for(let x=0;x<gw;x++){let s=0;for(let dy=0;dy<sm;dy++)for(let dx=0;dx<sm;dx++)s+=Y[(y*sm+dy)*w+x*sm+dx];gy[y*gw+x]=s/(sm*sm);}
+  const ex=[],ey=[],ed=[],mags=[];
+  for(let y=1;y<gh-1;y++)for(let x=1;x<gw-1;x++){
+    const i=y*gw+x;
+    const gxv=(gy[i+1-gw]+2*gy[i+1]+gy[i+1+gw])-(gy[i-1-gw]+2*gy[i-1]+gy[i-1+gw]);
+    const gyv=(gy[i+gw-1]+2*gy[i+gw]+gy[i+gw+1])-(gy[i-gw-1]+2*gy[i-gw]+gy[i-gw+1]);
+    const m=Math.hypot(gxv,gyv);if(m>0){ex.push(x);ey.push(y);ed.push([gxv/m,gyv/m]);mags.push(m);}
+  }
+  const sorted=Float32Array.from(mags).sort(),thr=sorted[Math.floor(sorted.length*.9)]||0;
+  const rmin=Math.round(w*.05/sm),rmax=Math.round(w*.28/sm);
+  let bs=0,bc=null;const cands=[];const acc=new Float32Array(GN);
+  for(let r=rmin;r<=rmax;r++){
+    acc.fill(0);
+    for(let k=0;k<ex.length;k++){if(mags[k]<thr)continue;
+      for(const sg of[1,-1]){const cx=Math.round(ex[k]+sg*r*ed[k][0]),cy=Math.round(ey[k]+sg*r*ed[k][1]);
+        if(cx>=0&&cx<gw&&cy>=0&&cy<gh)acc[cy*gw+cx]++;}}
+    for(let y=1;y<gh-1;y++)for(let x=1;x<gw-1;x++){
+      const i=y*gw+x;const v=(acc[i]*2+acc[i-1]+acc[i+1]+acc[i-gw]+acc[i+gw])/(2*Math.PI*r*2);
+      const score=v*Math.pow(r,.9);
+      if(score>bs){bs=score;bc=[x*sm,y*sm,r*sm];}
+      if(score>1.2)cands.push([score,x*sm,y*sm,r*sm]);
+    }
+  }
+  /* prefer the biggest driver (woofer) over a stronger but smaller one (tweeter) */
+  if(bc){
+    const ok=cands.filter(c=>c[0]>=.6*bs);
+    let pick=ok[0];for(const c of ok){if(c[3]>pick[3]*1.04||(Math.abs(c[3]-pick[3])<=pick[3]*.04&&c[0]>pick[0]))pick=c;}
+    /* average the near-duplicates around the pick */
+    let sw=0,sx2=0,sy2=0,sr=0;
+    for(const c of ok){if(Math.hypot(c[1]-pick[1],c[2]-pick[2])<pick[3]*.2&&Math.abs(c[3]-pick[3])<pick[3]*.15){sw+=c[0];sx2+=c[0]*c[1];sy2+=c[0]*c[2];sr+=c[0]*c[3];}}
+    if(sw>0)bc=[sx2/sw,sy2/sw,sr/sw];else bc=[pick[1],pick[2],pick[3]];
+  }
+  /* refine: slide the circle so its rim sits on the strongest radial edge (ignores the part outside the photo) */
+  if(bc){
+    const bil=(x,y)=>{x=Math.min(w-1.001,Math.max(0,x));y=Math.min(h-1.001,Math.max(0,y));const x0=x|0,y0=y|0,fx=x-x0,fy=y-y0,i=y0*w+x0;
+      return Y[i]*(1-fx)*(1-fy)+Y[i+1]*fx*(1-fy)+Y[i+w]*(1-fx)*fy+Y[i+w+1]*fx*fy;};
+    const T=48,cs=Array.from({length:T},(_,k)=>[Math.cos(k*2*Math.PI/T),Math.sin(k*2*Math.PI/T)]);
+    const rs=(x,y,r)=>{let s=0,n=0;for(const[cx,cy]of cs){const X=x+cx*r,Y2=y+cy*r;if(X<2||X>w-3||Y2<2||Y2>h-3)continue;
+        s+=Math.abs(bil(x+cx*(r+2),y+cy*(r+2))-bil(x+cx*(r-2),y+cy*(r-2)));n++;}
+      return n<T*.4?0:s/n*Math.sqrt(n/T);};
+    const x0=bc[0],y0=bc[1],r0=bc[2];let bb=-1,bv=bc.slice();
+    for(let dy=-.3;dy<=.3001;dy+=.04)for(let dx=-.3;dx<=.3001;dx+=.04)for(let dr=-.3;dr<=.3001;dr+=.04){
+      const x=x0+dx*r0,y=y0+dy*r0,r=r0*(1+dr),v=rs(x,y,r);if(v>bb){bb=v;bv=[x,y,r];}}
+    bc=bv;
+  }
+  if(bc&&bs>.02)res.spk=[bc[0]*inv,bc[1]*inv,bc[2]*inv];
+  res._score=bs;
+  return res;
+}
+
+function autoFind(){
+  if(!img){$('autoMsg').hidden=false;$('autoMsg').textContent=t('먼저 배경 이미지를 선택하세요.');return;}
+  const r=detectRack(img),[lw,lh]=SIZES[O.size];
+  const iw=img.width,ih=img.height,sc=Math.max(lw/iw,lh/ih),dw=iw*sc,dh=ih*sc,ox=-(dw-lw)*O.offset,oy=-(dh-lh)*O.offset;
+  const map=p=>[clamp(p[0]*sc+ox,0,lw),clamp(p[1]*sc+oy,0,lh)];
+  const found=[];
+  if(r.bars){O.quad=r.bars.map(map);found.push(t('막대'));}
+  if(r.vu){const f=fxNow();f.vl=r.vu[0].map(map);f.vr=r.vu[1].map(map);found.push(t('VU 2개'));}
+  if(r.spk){const f=fxNow(),c=map([r.spk[0],r.spk[1]]);f.sp=[c[0],c[1],Math.max(20,r.spk[2]*sc)];found.push(t('스피커'));}
+  const m=$('autoMsg');m.hidden=false;
+  m.textContent=found.length?(t('찾은 것: ')+found.join(', ')+t('. 위치가 조금 어긋나면 점을 끌어 고치세요.')+(r.bars&&r.vu&&r.spk?'':t(' (못 찾은 항목은 직접 맞추세요)'))):t('찾지 못했습니다. 직접 점을 끌어 맞추세요.');
+  if(r.bars)$('chkBars').checked=O.showBars=true;
+  if(r.vu)$('chkVu').checked=O.vu=true;
+  if(r.spk)$('chkSpk').checked=O.spk=true;
+  rebuild();
+}
+$('btnAuto').onclick=autoFind;
+$('inTitle').addEventListener('input',e=>{title=e.target.value.trim()||'SONG TITLE';rebuild();});
+
+/* ---------------------------------------------------------------- options */
+function range(id,out,fmt,cb){
+  const el=$(id),o=$(out);
+  const apply=()=>{o.textContent=fmt(+el.value);cb(+el.value);};
+  el.addEventListener('input',()=>{apply();});
+  el.addEventListener('change',()=>{schedule();});
+  o.textContent=fmt(+el.value);
+}
+let anaT=0;
+range('rngBars','vBars',v=>v,v=>{O.bars=v;schedule();clearTimeout(anaT);anaT=setTimeout(runAnalysis,400);});
+range('rngOff','vOff',v=>v+'%',v=>{O.offset=v/100;schedule();});
+range('rngPos','vPos',v=>v+'%',v=>{O.pos=v/100;schedule();});
+range('rngShade','vShade',v=>v+'%',v=>{O.shade=v/100;schedule();});
+range('rngSpk','vSpk',v=>v+'%',v=>{O.spkAmt=v/100;schedule();});
+range('rngScale','vScale',v=>v+'%',v=>{O.scale=v/100;schedule();});
+const bindSel=(id,cb)=>$(id).addEventListener('change',e=>{cb(e.target.value);schedule();});
+const bindChk=(id,cb)=>$(id).addEventListener('change',e=>{cb(e.target.checked);schedule();});
+bindSel('selSize',v=>{O.size=v;O.quad=null;O.fx=null;O.pos=defaultPos(O.style,v);$('rngPos').value=Math.round(O.pos*100);$('vPos').textContent=Math.round(O.pos*100)+'%';rebuild();});
+bindSel('selPalette',v=>{O.palette=+v;if(O.palette===4&&O.bars<20){const r=$('rngBars');r.value=24;r.dispatchEvent(new Event('input'));}});
+bindSel('selStyle',v=>{O.style=v;O.pos=defaultPos(v,O.size);$('rngPos').value=Math.round(O.pos*100);$('vPos').textContent=Math.round(O.pos*100)+'%';});
+bindSel('selFont',v=>{O.font=+v;});
+bindSel('selColor',v=>{O.color=v;});
+bindChk('chkErase',v=>{O.erase=v;});bindChk('chkFlash',v=>{O.flash=v;});
+bindChk('chkTitle',v=>{O.title=v;});bindChk('chkSection',v=>{O.section=v;});bindChk('chkProg',v=>{O.progress=v;});
+bindChk('chkFast',v=>{O.fast=v;});bindChk('chkBars',v=>{O.showBars=v;});bindChk('chkVu',v=>{O.vu=v;});bindChk('chkSpk',v=>{O.spk=v;});bindChk('chkGuide',v=>{O.guide=v;});
+$('txtHot').addEventListener('input',e=>{O.hot=e.target.value;schedule();});
+O.pos=defaultPos(O.style,O.size);
+
+/* ---------------------------------------------------------------- files */
+const cleanName=n=>n.replace(/\.[^.]+$/,'').replace(/_/g,' ').trim();
+async function loadImage(file){
+  const im=new Image();const url=URL.createObjectURL(file);im.src=url;
+  await im.decode();
+  const s=Math.min(1,2400/Math.max(im.naturalWidth,im.naturalHeight));
+  const c=document.createElement('canvas');c.width=Math.round(im.naturalWidth*s);c.height=Math.round(im.naturalHeight*s);
+  c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);return c;
+}
+$('fImage').addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{img=await loadImage(f);imgName=f.name;$('nImage').textContent=f.name;O.quad=null;O.fx=null;rebuild();updateReady();}
+  catch(err){$('nImage').textContent=t('이미지를 열 수 없습니다');}
+});
+async function runAnalysis(){
+  if(!mono)return;
+  const fps=24,nf=Math.ceil(dur*fps);
+  status(t('소리 분석 중…'));
+  const myA=await analyze(mono,sr,fps,nf,O.bars,p=>setProg(p));
+  A=myA;setProg(0);status(img?t('준비 완료'):t('배경 이미지를 선택하세요'));paint();updateReady();
+}
+$('fAudio').addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;
+  stopPlay();live=false;curT=0;
+  status(t('음악 읽는 중…'));$('nAudio').textContent=f.name;
+  try{
+    audioFile=f;audioRaw=await f.arrayBuffer();
+    audioBuf=await ac().decodeAudioData(audioRaw.slice(0));
+    sr=audioBuf.sampleRate;dur=audioBuf.duration;
+    const ch=audioBuf.numberOfChannels;mono=new Float32Array(audioBuf.length);
+    for(let c=0;c<ch;c++){const d=audioBuf.getChannelData(c);for(let i=0;i<mono.length;i++)mono[i]+=d[i]/ch;}
+    title=cleanName(f.name)||'SONG TITLE';
+    $('inTitle').value=title;
+    $('time').textContent='00:00 / '+mmss(dur);
+    $('play').disabled=false;$('seek').disabled=false;$('seek').value=0;
+    loadLyrics();rebuild();
+    await runAnalysis();
+  }catch(err){status(t('음악을 읽을 수 없습니다: ')+(err&&err.message?err.message:err));audioBuf=null;mono=null;updateReady();}
+});
+$('fLyric').addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;
+  lyrFile=f;$('nLyric').textContent=f.name;lyrText=decodeText(await f.arrayBuffer());
+  $('selLyr').value='1';loadLyrics();rebuild();
+});
+$('selLyr').addEventListener('change',()=>{loadLyrics();rebuild();});
+['t0','t1'].forEach(id=>$(id).addEventListener('change',()=>{loadLyrics();rebuild();}));
+function loadLyrics(){
+  const mode=+$('selLyr').value;
+  const a=parseFloat($('t0').value)||0;let b=parseFloat($('t1').value)||0;const d=dur||240;
+  if(b<=a)b=d;
+  let info='',res=[];
+  if(mode===1){
+    if(lyrText){const r=textToCues(lyrText,a,b);res=r.cues;info=t('가사 파일')+' ('+(r.timed?t('타이밍 있음'):t('타이밍 없음: 곡 길이에 맞춰 균등 배분'))+')';}
+    else info=t('가사 파일을 선택하세요.');
+  }else if(mode===0){
+    if(audioRaw){const r=embeddedLyrics(audioRaw,a,b);res=r.cues;info=r.info;
+      if(!res.length)info=t('음악 파일 속에서 가사를 찾지 못했습니다.\n.srt / .lrc / .txt 가사 파일을 "가사 파일"로 선택해 주세요.');}
+    else info=t('음악을 선택하면 파일 속 가사를 찾아봅니다.');
+  }else info=t('가사 없음');
+  cues=res;
+  lines=res.filter(c=>c.t&&!isMark(c.t));
+  marks=res.filter(c=>isMark(c.t)).map(c=>({s:c.s,t:c.t.replace(/^\[|\]$/g,'')}));
+  const sample=lines.slice(0,6).map(c=>mmss(c.s)+'  '+c.t).join('\n');
+  $('lyrInfo').textContent=info+(lines.length?t('\n가사 줄 수: ')+lines.length+'\n\n'+sample+(lines.length>6?'\n…':''):'');
+}
+function updateReady(){$('btnRender').disabled=!(img&&mono)||busy;}
+
+/* ---------------------------------------------------------------- playback */
+function stopPlay(){
+  if(src){try{src.onended=null;src.stop();}catch(e){}src=null;}
+  playing=false;cancelAnimationFrame(raf);$('transport').classList.remove('playing');
+}
+function playFrom(t){
+  if(!audioBuf)return;
+  stopPlay();const a=ac();if(a.state==='suspended')a.resume();
+  src=a.createBufferSource();src.buffer=audioBuf;src.connect(a.destination);
+  src.start(0,t);startCtx=a.currentTime;startT=t;playing=true;live=true;
+  $('transport').classList.add('playing');
+  const loop=()=>{
+    if(!playing)return;
+    curT=startT+(a.currentTime-startCtx);
+    if(curT>=dur){curT=dur;stopPlay();}
+    $('seek').value=Math.round(curT/dur*1000);$('time').textContent=mmss(curT)+' / '+mmss(dur);
+    paint();if(playing)raf=requestAnimationFrame(loop);
+  };
+  raf=requestAnimationFrame(loop);
+}
+$('play').addEventListener('click',()=>{if(playing){stopPlay();}else playFrom(curT>=dur-.1?0:curT);});
+$('seek').addEventListener('input',e=>{
+  curT=(+e.target.value)/1000*dur;live=true;
+  $('time').textContent=mmss(curT)+' / '+mmss(dur);
+  if(playing)playFrom(curT);else paint();
+});
+
+/* ---------------------------------------------------------------- render */
+function ensureMuxer(){
+  if(window.Mp4Muxer)return Promise.resolve(true);
+  return new Promise(res=>{
+    const s=document.createElement('script');
+    s.src='https://unpkg.com/mp4-muxer@5.1.3/build/mp4-muxer.js';
+    s.onload=()=>res(!!window.Mp4Muxer);s.onerror=()=>res(false);document.head.appendChild(s);
+    setTimeout(()=>res(!!window.Mp4Muxer),6000);
+  });
+}
+async function pickVideoCodec(w,h,fps,bitrate){
+  const list=[['avc','avc1.640028'],['avc','avc1.4d0028'],['avc','avc1.42001f'],['vp9','vp09.00.40.08'],['vp9','vp09.00.10.08']];
+  for(const [m,c] of list){
+    try{const r=await VideoEncoder.isConfigSupported({codec:c,width:w,height:h,bitrate,framerate:fps});if(r&&r.supported)return {mux:m,codec:c};}catch(e){}
+  }
+  return null;
+}
+async function encodeWebCodecs(an,sc,w,h,fps,nf){
+  const bitrate=O.fast?4e6:8e6;
+  const vc=await pickVideoCodec(w,h,fps,bitrate);
+  if(!vc)throw new Error('unsupported-video');
+  const ach=Math.min(2,audioBuf.numberOfChannels),asr=audioBuf.sampleRate;
+  let acfg=null;
+  for(const [m,c] of [['aac','mp4a.40.2'],['opus','opus']]){
+    try{const r=await AudioEncoder.isConfigSupported({codec:c,sampleRate:asr,numberOfChannels:ach,bitrate:192000});if(r&&r.supported){acfg={mux:m,codec:c};break;}}catch(e){}
+  }
+  if(!acfg)throw new Error('unsupported-audio');
+  const M=window.Mp4Muxer;
+  const muxer=new M.Muxer({target:new M.ArrayBufferTarget(),video:{codec:vc.mux,width:w,height:h},
+    audio:{codec:acfg.mux,numberOfChannels:ach,sampleRate:asr},fastStart:'in-memory'});
+  let err=null;
+  const venc=new VideoEncoder({output:(c,m)=>muxer.addVideoChunk(c,m),error:e=>{err=e;}});
+  venc.configure({codec:vc.codec,width:w,height:h,bitrate,framerate:fps});
+  const aenc=new AudioEncoder({output:(c,m)=>muxer.addAudioChunk(c,m),error:e=>{err=e;}});
+  aenc.configure({codec:acfg.codec,sampleRate:asr,numberOfChannels:ach,bitrate:192000});
+  const cvs=document.createElement('canvas');cvs.width=w;cvs.height=h;const g=cvs.getContext('2d');
+  for(let f=0;f<nf;f++){
+    if(cancel)throw new Error('cancel');if(err)throw err;
+    sc.frame(g,f/fps,an.lvl[f],an.peak[f],an.kick[f],fxOf(an,f));
+    const vf=new VideoFrame(cvs,{timestamp:Math.round(f*1e6/fps),duration:Math.round(1e6/fps)});
+    venc.encode(vf,{keyFrame:f%(fps*2)===0});vf.close();
+    while(venc.encodeQueueSize>8){await sleep(2);if(err)throw err;}
+    if(f%6===0){setProg(.15+.7*f/nf);status(t('영상 만드는 중… ')+Math.round(f/nf*100)+'%');await tick();}
+  }
+  await venc.flush();
+  status(t('소리 인코딩 중…'));
+  const total=Math.min(audioBuf.length,Math.ceil(dur*asr)),CH=8192;
+  for(let off=0;off<total;off+=CH){
+    if(cancel)throw new Error('cancel');if(err)throw err;
+    const n=Math.min(CH,total-off),data=new Float32Array(n*ach);
+    for(let c=0;c<ach;c++)data.set(audioBuf.getChannelData(c).subarray(off,off+n),c*n);
+    const ad=new AudioData({format:'f32-planar',sampleRate:asr,numberOfFrames:n,numberOfChannels:ach,timestamp:Math.round(off*1e6/asr),data});
+    aenc.encode(ad);ad.close();
+    while(aenc.encodeQueueSize>16){await sleep(2);}
+    if((off/CH)%20===0){setProg(.85+.1*off/total);await tick();}
+  }
+  await aenc.flush();
+  muxer.finalize();
+  venc.close();aenc.close();
+  return new Blob([muxer.target.buffer],{type:'video/mp4'});
+}
+async function encodeRecorder(an,sc,w,h,fps,nf){
+  const cands=['video/mp4;codecs=avc1.640028,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  const mime=cands.find(m=>window.MediaRecorder&&MediaRecorder.isTypeSupported(m));
+  if(!mime)throw new Error(t('이 브라우저는 영상 만들기를 지원하지 않습니다. 최신 Chrome 또는 Edge를 사용하세요.'));
+  const cvs=document.createElement('canvas');cvs.width=w;cvs.height=h;const g=cvs.getContext('2d');
+  sc.frame(g,0,an.lvl[0],an.peak[0],an.kick[0],fxOf(an,0));
+  const a=ac();if(a.state==='suspended')await a.resume();
+  const stream=cvs.captureStream(fps),dest=a.createMediaStreamDestination(),bs=a.createBufferSource();
+  bs.buffer=audioBuf;bs.connect(dest);stream.addTrack(dest.stream.getAudioTracks()[0]);
+  const chunks=[];const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:O.fast?4e6:8e6,audioBitsPerSecond:192000});
+  rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
+  const done=new Promise(r=>{rec.onstop=r;});
+  rec.start(500);bs.start();const t0=a.currentTime;
+  await new Promise((res,rej)=>{
+    const iv=setInterval(()=>{
+      const tt=a.currentTime-t0;
+      if(cancel){clearInterval(iv);rej(new Error('cancel'));return;}
+      if(tt>=dur){clearInterval(iv);res();return;}
+      const f=clamp(Math.floor(tt*fps),0,nf-1);
+      sc.frame(g,f/fps,an.lvl[f],an.peak[f],an.kick[f],fxOf(an,f));
+      setProg(.15+.8*tt/dur);status(t('영상 만드는 중 (실시간)… ')+Math.round(tt/dur*100)+'%');
+    },1000/fps);
+  }).catch(e=>{try{bs.stop();}catch(x){}try{rec.stop();}catch(x){}throw e;});
+  try{bs.stop();}catch(e){}
+  rec.stop();await done;
+  return new Blob(chunks,{type:mime.split(';')[0]});
+}
+async function render(){
+  if(busy||!img||!mono)return;
+  busy=true;cancel=false;resultBlob=null;$('btnSave').hidden=true;
+  $('btnRender').disabled=true;$('btnCancel').disabled=false;stopPlay();
+  document.querySelectorAll('.ctrl input,.ctrl select,.ctrl button').forEach(el=>{if(el.id!=='btnCancel')el.disabled=true;});
+  let wake=null;try{wake=await navigator.wakeLock.request('screen');}catch(e){}
+  try{
+    const fps=O.fast?24:30,k=O.fast?2/3:1,[lw,lh]=SIZES[O.size],w=even(lw*k),h=even(lh*k),nf=Math.ceil(dur*fps);
+    status(t('소리 분석 중…'));setProg(0);
+    const an=(A&&A.fps===fps&&A.bands===O.bars&&A.nf===nf)?A:await analyze(mono,sr,fps,nf,O.bars,p=>setProg(p*.15));
+    setProg(.15);
+    const sc=makeScene(O,w,h,img,lines,marks,title,dur);
+    let blob=null;
+    const hasWC=typeof VideoEncoder==='function'&&typeof AudioEncoder==='function'&&typeof VideoFrame==='function'&&typeof AudioData==='function';
+    if(hasWC&&await ensureMuxer()){
+      try{blob=await encodeWebCodecs(an,sc,w,h,fps,nf);}
+      catch(e){if(e&&e.message==='cancel')throw e;console.warn('WebCodecs path failed',e);status(t('빠른 방식을 쓸 수 없어 실시간 방식으로 만듭니다…'));}
+    }
+    if(!blob)blob=await encodeRecorder(an,sc,w,h,fps,nf);
+    resultBlob=blob;
+    const safe=(title||'video').replace(/[^\w가-힣 -]/g,'_').trim()||'video';
+    resultName=safe+(blob.type.includes('mp4')?'.mp4':'.webm');
+    setProg(1);status(t('완료! 아래 버튼으로 저장하세요 (')+(blob.size/1048576).toFixed(1)+' MB, '+resultName.split('.').pop().toUpperCase()+')');
+    $('btnSave').hidden=false;
+  }catch(e){
+    if(e&&e.message==='cancel'){status(t('취소되었습니다'));setProg(0);}
+    else{status(t('실패: ')+(e&&e.message?e.message:e));}
+  }finally{
+    busy=false;$('btnCancel').disabled=true;
+    document.querySelectorAll('.ctrl input,.ctrl select,.ctrl button').forEach(el=>{if(el.id!=='btnCancel'&&el.id!=='btnRender')el.disabled=false;});
+    updateReady();if(wake){try{wake.release();}catch(e){}}
+  }
+}
+$('btnRender').addEventListener('click',render);
+$('btnCancel').addEventListener('click',()=>{cancel=true;});
+$('btnSave').addEventListener('click',async()=>{
+  if(!resultBlob)return;
+  let dl=null;try{dl=window.claude?await window.claude.use('downloads'):null;}catch(e){}
+  if(dl){
+    try{await dl.save({filename:resultName,data:resultBlob});status(t('저장했습니다: ')+resultName);}
+    catch(e){status(e&&e.code==='declined'?t('저장을 취소했습니다. 버튼을 다시 눌러 저장할 수 있습니다.'):t('저장할 수 없습니다 (')+(e&&e.code||e)+')');}
+  }else{
+    const u=URL.createObjectURL(resultBlob),a=document.createElement('a');a.href=u;a.download=resultName;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(u),10000);status(t('저장을 시작했습니다: ')+resultName);
+  }
+});
+
+/* ---------------------------------------------------------------- start */
+sizePreview();paint();
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{if(img)rebuild();});
+window.addEventListener('resize',()=>{if(img)paint();});
+window.__svm={O,get A(){return A;},get lines(){return lines;},rebuild,render,get blob(){return resultBlob;}};
+})();
+initLang();
+</script>
