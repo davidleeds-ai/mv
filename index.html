@@ -60,6 +60,12 @@ input[type=range]::-moz-range-thumb{width:16px;height:24px;border-radius:2px;bac
 .arrows{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .info{font-family:var(--font-mono);font-size:.78rem;color:var(--ink-dim);line-height:1.55;white-space:pre-wrap;word-break:break-word;background:#0d0f10;border:1px solid var(--edge);border-radius:3px;padding:8px;max-height:150px;overflow:auto}
 progress{width:100%;height:12px;accent-color:var(--led-g)}
+.fold{min-width:0;background:var(--panel);border:1px solid var(--edge);border-radius:4px}
+.fold summary{padding:10px 14px;cursor:pointer;color:var(--led-c);font-weight:700}
+.fold summary:focus-visible{outline:2px solid var(--led-c);outline-offset:2px}
+.fold-body{display:grid;gap:10px;padding:0 12px 12px;min-width:0}
+#lyrInfo{white-space:pre-wrap;max-height:3em;overflow:auto}
+.btn.stop:disabled{display:none}
 .status{font-family:var(--font-mono);font-size:.85rem;color:var(--amber);min-height:1.3em;word-break:break-word}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
@@ -91,35 +97,85 @@ progress{width:100%;height:12px;accent-color:var(--led-g)}
       <h2>파일</h2>
       <label class="filebtn">음악 선택 (mp3, m4a, wav …)<input type="file" id="fAudio" accept="audio/*,.mp3,.m4a,.aac,.wav,.flac,.ogg,.opus"></label>
       <div class="fname" id="nAudio">선택 안 됨</div>
-      <label class="filebtn">배경 이미지 선택<input type="file" id="fImage" accept="image/*"></label>
+      <label class="filebtn">배경 사진 또는 동영상 선택<input type="file" id="fImage" accept="image/*,video/*,.mp4,.webm,.mov,.m4v"></label>
       <div class="fname" id="nImage">선택 안 됨</div>
+      <label class="filebtn">가사 파일 선택<input type="file" id="fLyric" accept=".srt,.lrc,.txt,text/plain"></label>
+      <div class="fname" id="nLyric">선택 안 됨</div>
+      <div class="hint" aria-live="polite" id="lyrInfo">가사를 읽으면 여기에 결과가 표시됩니다.</div>
       <label class="f"><span class="lab">영상 제목 (화면과 파일 이름에 쓰입니다)</span><input type="text" id="inTitle" maxlength="80" placeholder="SONG TITLE" autocomplete="off"></label>
+      <label class="f"><span class="lab">영상 크기</span>
+        <select id="selSize"><option value="portrait">세로 9:16 (1080×1920)</option><option value="landscape">가로 16:9 (1920×1080)</option><option value="square">정사각형 1:1 (1080×1080)</option></select></label>
+      <label class="f"><span class="lab">배경 모드</span>
+        <select id="selBackground"><option value="auto">자동 판별</option><option value="photo">일반 사진</option><option value="rack">오디오 기기</option></select></label>
+      <div class="two">
+        <label class="chk"><input type="checkbox" id="chkBars">막대 스펙트럼 표시</label>
+        <label class="chk"><input type="checkbox" id="chkGuide">정렬 보기 (원본 사진 + 격자선)</label>
+      </div>
+      <label class="chk"><input type="checkbox" id="chkMotion" checked>일반 사진 움직이기</label>
+      <label class="f"><span class="lab">사진 움직임</span>
+        <select id="selPhotoMotion"><option value="auto">사진 분석으로 자동 선택</option><option value="portrait">인물 입체 효과 (중앙 인물)</option><option value="landscape">풍경 (하늘·물·나뭇잎)</option><option value="zoom">부드러운 줌만</option></select></label>
+      <label class="f"><span class="lab">사진 움직임 강도<span class="v" id="vMotion">40%</span></span><input type="range" id="rngMotion" min="0" max="100" value="40"></label>
+      <div class="hint" id="autoMsg" aria-live="polite" hidden></div>
     </div>
 
     <div class="grp">
-      <h2>화면과 막대</h2>
-      <label class="f"><span class="lab">영상 크기</span>
-        <select id="selSize"><option value="portrait">세로 9:16 (1080×1920)</option><option value="landscape">가로 16:9 (1920×1080)</option><option value="square">정사각형 1:1 (1080×1080)</option></select></label>
+      <h2>자막</h2>
+      <label class="f"><span class="lab">자막 종류</span>
+        <select id="selStyle"><option value="rack">랙 패널 (제목 + 앞뒤 가사)</option><option value="karaoke">큰 가사 한 줄 (윤곽선)</option><option value="subtitle">영화 자막</option><option value="word">단어 하이라이트 (틱톡·쇼츠)</option><option value="label">라벨 박스 (둥근 박스)</option><option value="type">타자기 (한 글자씩)</option><option value="pop">팝업 (통통 튀며 등장)</option><option value="neon">네온 (빛나는 글씨)</option></select></label>
+      <div class="two">
+        <label class="f"><span class="lab">글꼴</span>
+          <select id="selFont"><option value="0">고딕 굵게</option><option value="1">좁은 고딕 굵게</option><option value="2">명조 굵게</option><option value="3">고정폭 굵게</option><option value="4">Noto Sans KR · 고딕</option><option value="5">Noto Serif KR · 명조</option><option value="6">고운돋움</option><option value="7">고운바탕</option><option value="8">검은고딕</option><option value="9">배민 주아</option><option value="10">나눔손글씨 펜</option><option value="11">배민 도현</option></select></label>
+        <label class="f"><span class="lab">글자 색</span>
+          <select id="selColor"><option value="#e6e4dc">흰색</option><option value="#ffe046">노랑</option><option value="#21deff">하늘</option><option value="#46ff3e">초록</option><option value="#ff78c8">분홍</option><option value="#ff9628">주황</option></select></label>
+      </div>
+      <label class="f"><span class="lab">글자 크기<span class="v" id="vScale">100%</span></span><input type="range" id="rngScale" min="50" max="200" value="100"></label>
+      <details class="fold"><summary>자막 세부 설정</summary><div class="fold-body">
+      <label class="f"><span class="lab">자막 위치 (위 0% ~ 아래 100%)<span class="v" id="vPos">0%</span></span><input type="range" id="rngPos" min="0" max="100" value="0"></label>
+      <label class="f"><span class="lab">가사 뒤 어둡게 (0% = 사진 그대로)<span class="v" id="vShade">50%</span></span><input type="range" id="rngShade" min="0" max="100" value="50"></label>
+      <label class="f"><span class="lab">강조 단어 (쉼표로 구분, 포함된 줄은 초록색)</span><input type="text" id="txtHot" placeholder="예: BOOM, PUNCH"></label>
+      <label class="chk"><input type="checkbox" id="chkTitle" checked>곡 제목 표시</label>
+      <label class="chk"><input type="checkbox" id="chkSection" checked>[Chorus] 같은 구간 이름 표시</label>
+      <label class="chk"><input type="checkbox" id="chkProg" checked>진행 막대와 시간 표시</label>
+      </div></details>
+    </div>
+    <div class="grp">
+      <h2>MP4 만들기</h2>
+      <div class="row">
+        <button class="btn go" type="button" id="btnRender" disabled>MP4 만들기</button>
+        <button class="btn stop" type="button" id="btnCancel" disabled>취소</button>
+      </div>
+      <progress id="prog" max="1000" value="0"></progress>
+      <div class="status" id="status">음악과 이미지를 선택하세요</div>
+      <button class="btn" type="button" id="btnSave" hidden>완성된 영상 저장</button>
+      <details class="fold"><summary>출력 설정</summary><div class="fold-body">
+      <label class="chk"><input type="checkbox" id="chkFast" checked>빠른 모드 (24fps, 2/3 해상도)</label>
+      </div></details>
+      <div class="hint">만드는 동안 이 탭을 열어 두세요. 최신 Chrome/Edge에서는 실시간보다 빠르게 만들고, 그렇지 않은 브라우저에서는 곡 길이만큼 걸립니다.</div>
+    </div>
+    <details class="fold"><summary>고급 설정</summary><div class="fold-body">
+      <details class="fold"><summary>화면과 막대</summary><div class="fold-body">
       <label class="f"><span class="lab">막대 색</span>
         <select id="selPalette"><option value="0">Hi-fi (초록/하늘/파랑)</option><option value="1">Fire (노랑/빨강)</option><option value="2">Neon (분홍/보라)</option><option value="3">Ice (흰색/파랑)</option><option value="4">McIntosh (하늘 → 초록 → 노랑 → 빨강)</option></select></label>
       <label class="f"><span class="lab">막대 개수<span class="v" id="vBars">8</span></span><input type="range" id="rngBars" min="4" max="32" value="8"></label>
       <label class="f"><span class="lab">이미지 위치<span class="v" id="vOff">50%</span></span><input type="range" id="rngOff" min="0" max="100" value="50"></label>
+      <label class="chk"><input type="checkbox" id="chkFit" checked>원본 사진 전체 표시 (화면비가 다르면 여백 추가)</label>
       <label class="chk"><input type="checkbox" id="chkErase" checked>원래 있던 막대를 어둡게 가리기</label>
-      <label class="chk"><input type="checkbox" id="chkFlash" checked>킥(박자)에 화면 번쩍임</label>
-    </div>
-
-    <div class="grp">
-      <h2>효과 (VU 미터 · 스피커)</h2>
-      <label class="chk"><input type="checkbox" id="chkBars" checked>막대 스펙트럼 표시</label>
+      <label class="chk"><input type="checkbox" id="chkFlash">킥(박자)에 화면 번쩍임</label>
+      </div></details>
+      <details class="fold"><summary>효과 (VU 미터 · 스피커)</summary><div class="fold-body">
       <label class="chk"><input type="checkbox" id="chkVu">VU 미터 바늘 (미터 창 두 곳을 맞추세요)</label>
+      <label class="f"><span class="lab">VU 모양</span>
+        <select id="selVuStyle"><option value="real">원본 눈금판 유지 — 바늘만 교체</option><option value="blue">파란 눈금판 (검은 바늘)</option><option value="amber">호박색 눈금판</option><option value="clear">눈금판 없음 — 바늘만 (투명)</option></select></label>
+      <div class="two">
+        <label class="f"><span class="lab">바늘 색</span><input type="color" id="inVuCol" value="#f8e9bd"></label>
+        <label class="f"><span class="lab">&nbsp;</span><button class="btn" type="button" id="btnVuColAuto">바늘 색 자동</button></label>
+      </div>
       <label class="chk"><input type="checkbox" id="chkSpk">스피커 진동 (스피커 중심과 크기를 맞추세요)</label>
       <label class="f"><span class="lab">스피커 진동 세기<span class="v" id="vSpk">80%</span></span><input type="range" id="rngSpk" min="0" max="100" value="80"></label>
-      <div class="hint">VU 바늘은 사진 속 미터 창을 새 눈금판으로 덮고 그 위에서 움직입니다. 네 모서리를 각각 끌어 사진 속 미터 창의 기울기(원근)에 맞출 수 있습니다. 왼쪽 미터는 저음, 오른쪽 미터는 중·고음에 반응합니다. 스피커는 베이스(킥)가 칠 때마다 콘이 안쪽으로 울립니다.</div>
-    </div>
-
-    <div class="grp">
-      <h2>영역 맞추기</h2>
-      <label class="chk"><input type="checkbox" id="chkGuide">정렬 보기 (원본 사진 + 격자선)</label>
+      <div class="hint">사진을 올리면 자동으로 찾습니다. 영역 안을 끌어 이동하고, 모서리나 바깥 점을 끌어 크기를 맞추세요.</div>
+      <div class="hint">정렬 보기에서 분홍 점은 회전축과 눈금 양 끝, 흰 점은 사진 속 기존 바늘 끝입니다. VU를 놓쳤다면 VU를 켜고 창과 점을 직접 맞추세요.</div>
+      </div></details>
+      <details class="fold"><summary>영역 맞추기</summary><div class="fold-body">
       <div class="two">
         <label class="f"><span class="lab">미세 조정 대상</span>
           <select id="selTarget"><option value="0">막대 왼쪽 위</option><option value="1">막대 오른쪽 위</option><option value="2">막대 오른쪽 아래</option><option value="3">막대 왼쪽 아래</option><option value="4">막대 전체 이동</option><option value="5">VU 왼쪽 이동</option><option value="6">VU 오른쪽 이동</option><option value="7">스피커 이동</option></select></label>
@@ -144,59 +200,22 @@ progress{width:100%;height:12px;accent-color:var(--led-g)}
         <button class="btn" type="button" id="btnSpkAdd">스피커 추가</button>
         <button class="btn" type="button" id="btnSpkDel">마지막 스피커 지우기</button>
       </div>
-      <div class="hint" id="autoMsg" hidden></div>
-    </div>
-
-    <div class="grp">
-      <h2>자막</h2>
-      <label class="f"><span class="lab">자막 종류</span>
-        <select id="selStyle"><option value="rack">랙 패널 (제목 + 앞뒤 가사)</option><option value="karaoke">큰 가사 한 줄 (윤곽선)</option><option value="subtitle">영화 자막</option><option value="word">단어 하이라이트 (틱톡·쇼츠)</option><option value="label">라벨 박스 (둥근 박스)</option><option value="type">타자기 (한 글자씩)</option><option value="pop">팝업 (통통 튀며 등장)</option><option value="neon">네온 (빛나는 글씨)</option></select></label>
-      <label class="f"><span class="lab">자막 위치 (위 0% ~ 아래 100%)<span class="v" id="vPos">0%</span></span><input type="range" id="rngPos" min="0" max="100" value="0"></label>
-      <label class="f"><span class="lab">가사 뒤 어둡게 (0% = 사진 그대로)<span class="v" id="vShade">50%</span></span><input type="range" id="rngShade" min="0" max="100" value="50"></label>
-      <div class="two">
-        <label class="f"><span class="lab">글꼴</span>
-          <select id="selFont"><option value="0">고딕 굵게</option><option value="1">좁은 고딕 굵게</option><option value="2">명조 굵게</option><option value="3">고정폭 굵게</option></select></label>
-        <label class="f"><span class="lab">글자 색</span>
-          <select id="selColor"><option value="#e6e4dc">흰색</option><option value="#ffe046">노랑</option><option value="#21deff">하늘</option><option value="#46ff3e">초록</option><option value="#ff78c8">분홍</option><option value="#ff9628">주황</option></select></label>
-      </div>
-      <label class="f"><span class="lab">글자 크기<span class="v" id="vScale">100%</span></span><input type="range" id="rngScale" min="50" max="200" value="100"></label>
-      <label class="f"><span class="lab">강조 단어 (쉼표로 구분, 포함된 줄은 초록색)</span><input type="text" id="txtHot" placeholder="예: BOOM, PUNCH"></label>
-      <label class="chk"><input type="checkbox" id="chkTitle" checked>곡 제목 표시</label>
-      <label class="chk"><input type="checkbox" id="chkSection" checked>[Chorus] 같은 구간 이름 표시</label>
-      <label class="chk"><input type="checkbox" id="chkProg" checked>진행 막대와 시간 표시</label>
-    </div>
-
-    <div class="grp">
-      <h2>가사</h2>
+      </div></details>
+      <details class="fold"><summary>가사</summary><div class="fold-body">
       <label class="f"><span class="lab">가사 출처</span>
         <select id="selLyr"><option value="0">자동: 음악 파일 속 가사 태그</option><option value="1">가사 파일 (.srt .lrc .txt)</option><option value="2">가사 없음</option></select></label>
-      <label class="filebtn">가사 파일 선택<input type="file" id="fLyric" accept=".srt,.lrc,.txt,text/plain"></label>
-      <div class="fname" id="nLyric">선택 안 됨</div>
       <div class="two">
         <label class="f"><span class="lab">노래 시작(초)</span><input type="number" id="t0" min="0" step="0.5" placeholder="비우면 처음"></label>
         <label class="f"><span class="lab">노래 끝(초)</span><input type="number" id="t1" min="0" step="0.5" placeholder="비우면 끝"></label>
       </div>
       <div class="hint">타이밍 없는 가사는 곡 길이에 맞춰 균등 배분됩니다. 시작·끝 초를 알면 입력하세요.</div>
-      <div class="info" id="lyrInfo">가사를 읽으면 여기에 결과가 표시됩니다.</div>
-    </div>
-
-    <div class="grp">
-      <h2>MP4 만들기</h2>
-      <label class="chk"><input type="checkbox" id="chkFast" checked>빠른 모드 (24fps, 2/3 해상도)</label>
-      <div class="row">
-        <button class="btn go" type="button" id="btnRender" disabled>MP4 만들기</button>
-        <button class="btn stop" type="button" id="btnCancel" disabled>취소</button>
-      </div>
-      <progress id="prog" max="1000" value="0"></progress>
-      <div class="status" id="status">음악과 이미지를 선택하세요</div>
-      <button class="btn" type="button" id="btnSave" hidden>완성된 영상 저장</button>
-      <div class="hint">만드는 동안 이 탭을 열어 두세요. 최신 Chrome/Edge에서는 실시간보다 빠르게 만들고, 그렇지 않은 브라우저에서는 곡 길이만큼 걸립니다.</div>
-    </div>
+      </div></details>
+    </div></details>
   </section>
 </main>
 
 <script>
-const I18N={"en": {"단어 하이라이트 (틱톡·쇼츠)": "Word highlight (TikTok/Shorts)", "라벨 박스 (둥근 박스)": "Label box (rounded)", "타자기 (한 글자씩)": "Typewriter (letter by letter)", "팝업 (통통 튀며 등장)": "Pop-in (bouncy)", "음악 + 배경 이미지 → 스펙트럼과 자막이 있는 MP4": "Music + background image → MP4 with spectrum and lyrics", "배경 이미지를 선택하면": "Choose a background image", "여기에 미리보기가 나타납니다": "and the preview appears here", "점을 끌어 영역을 맞추세요 (노란색 = 막대, 하늘색 = VU 미터, 주황색 = 스피커). 끄는 동안 원본 사진과 확대경이 나타납니다. 안쪽을 끌면 이동, 막대는 빈 곳을 끌면 새 사각형이 만들어집니다.": "Drag the dots to fit each area (yellow = bars, cyan = VU meters, orange = speaker). The original photo and a magnifier appear while dragging. Drag inside a shape to move it; dragging an empty spot draws a new bar rectangle.", "파일": "Files", "음악 선택 (mp3, m4a, wav …)": "Choose music (mp3, m4a, wav …)", "선택 안 됨": "Nothing selected", "배경 이미지 선택": "Choose background image", "영상 제목 (화면과 파일 이름에 쓰입니다)": "Video title (shown on screen and used as file name)", "화면과 막대": "Screen & bars", "영상 크기": "Video size", "세로 9:16 (1080×1920)": "Portrait 9:16 (1080×1920)", "가로 16:9 (1920×1080)": "Landscape 16:9 (1920×1080)", "정사각형 1:1 (1080×1080)": "Square 1:1 (1080×1080)", "막대 색": "Bar colors", "Hi-fi (초록/하늘/파랑)": "Hi-fi (green/cyan/blue)", "Fire (노랑/빨강)": "Fire (yellow/red)", "Neon (분홍/보라)": "Neon (pink/purple)", "Ice (흰색/파랑)": "Ice (white/blue)", "McIntosh (하늘 → 초록 → 노랑 → 빨강)": "McIntosh (cyan → green → yellow → red)", "막대 개수": "Number of bars", "이미지 위치": "Image position", "원래 있던 막대를 어둡게 가리기": "Darken the original bars in the photo", "킥(박자)에 화면 번쩍임": "Flash the screen on kick (beat)", "효과 (VU 미터 · 스피커)": "Effects (VU meters · speaker)", "막대 스펙트럼 표시": "Show spectrum bars", "VU 미터 바늘 (미터 창 두 곳을 맞추세요)": "VU meter needles (fit the two meter windows)", "스피커 진동 (스피커 중심과 크기를 맞추세요)": "Speaker pulse (set speaker center and size)", "스피커 진동 세기": "Speaker pulse strength", "VU 바늘은 사진 속 미터 창을 새 눈금판으로 덮고 그 위에서 움직입니다. 네 모서리를 각각 끌어 사진 속 미터 창의 기울기(원근)에 맞출 수 있습니다. 왼쪽 미터는 저음, 오른쪽 미터는 중·고음에 반응합니다. 스피커는 베이스(킥)가 칠 때마다 콘이 안쪽으로 울립니다.": "The VU needles move on a new dial that covers the meter window in the photo. Drag each of the four corners to match the window's tilt (perspective). The left meter reacts to bass, the right meter to mids and highs. The speaker cone pushes inward on every bass (kick) hit.", "영역 맞추기": "Align areas", "정렬 보기 (원본 사진 + 격자선)": "Alignment view (original photo + grid)", "미세 조정 대상": "Fine-tune target", "막대 왼쪽 위": "Bars: top-left", "막대 오른쪽 위": "Bars: top-right", "막대 오른쪽 아래": "Bars: bottom-right", "막대 왼쪽 아래": "Bars: bottom-left", "막대 전체 이동": "Move all bars", "VU 왼쪽 이동": "Move left VU", "VU 오른쪽 이동": "Move right VU", "스피커 이동": "Move speaker", "이동 단위": "Step size", "작게": "Small", "보통": "Medium", "크게": "Large", "영역 키우기": "Grow area", "영역 줄이기": "Shrink area", "초기화": "Reset", "사진에서 자동으로 찾기 (막대 · VU · 스피커)": "Auto-detect from photo (bars · VU · speaker)", "자막": "Lyrics style", "자막 종류": "Lyrics style", "랙 패널 (제목 + 앞뒤 가사)": "Rack panel (title + previous/next lines)", "큰 가사 한 줄 (윤곽선)": "Big single line (outlined)", "영화 자막": "Movie subtitle", "네온 (빛나는 글씨)": "Neon (glowing text)", "자막 위치 (위 0% ~ 아래 100%)": "Lyrics position (top 0% – bottom 100%)", "가사 뒤 어둡게 (0% = 사진 그대로)": "Darken behind lyrics (0% = photo as is)", "글꼴": "Font", "고딕 굵게": "Sans bold", "좁은 고딕 굵게": "Condensed sans bold", "명조 굵게": "Serif bold", "고정폭 굵게": "Monospace bold", "글자 색": "Text color", "흰색": "White", "노랑": "Yellow", "하늘": "Cyan", "초록": "Green", "분홍": "Pink", "주황": "Orange", "글자 크기": "Text size", "강조 단어 (쉼표로 구분, 포함된 줄은 초록색)": "Highlight words (comma-separated; lines containing them turn green)", "곡 제목 표시": "Show song title", "[Chorus] 같은 구간 이름 표시": "Show section names like [Chorus]", "진행 막대와 시간 표시": "Show progress bar and time", "가사": "Lyrics", "가사 출처": "Lyrics source", "자동: 음악 파일 속 가사 태그": "Auto: lyrics tag inside the music file", "가사 파일 (.srt .lrc .txt)": "Lyrics file (.srt .lrc .txt)", "가사 없음": "No lyrics", "가사 파일 선택": "Choose lyrics file", "노래 시작(초)": "Song start (sec)", "노래 끝(초)": "Song end (sec)", "타이밍 없는 가사는 곡 길이에 맞춰 균등 배분됩니다. 시작·끝 초를 알면 입력하세요.": "Lyrics without timing are spread evenly over the song length. Enter start/end seconds if you know them.", "가사를 읽으면 여기에 결과가 표시됩니다.": "Lyrics loading results appear here.", "MP4 만들기": "Create MP4", "빠른 모드 (24fps, 2/3 해상도)": "Fast mode (24 fps, 2/3 resolution)", "취소": "Cancel", "음악과 이미지를 선택하세요": "Choose music and an image", "완성된 영상 저장": "Save finished video", "만드는 동안 이 탭을 열어 두세요. 최신 Chrome/Edge에서는 실시간보다 빠르게 만들고, 그렇지 않은 브라우저에서는 곡 길이만큼 걸립니다.": "Keep this tab open while it renders. Recent Chrome/Edge render faster than real time; other browsers take as long as the song.", "영상 미리보기": "Video preview", "재생 또는 일시정지": "Play or pause", "재생 위치": "Playback position", "왼쪽": "Left", "오른쪽": "Right", "위": "Up", "아래": "Down", "예: BOOM, PUNCH": "e.g. BOOM, PUNCH", "비우면 처음": "Empty = start", "비우면 끝": "Empty = end", "음악 파일 속 가사": "Lyrics in music file", "타이밍 있음": "timed", "타이밍 없음: 곡 길이에 맞춰 균등 배분": "no timing: spread evenly over the song", "먼저 배경 이미지를 선택하세요.": "Choose a background image first.", "막대": "bars", "VU 2개": "2 VU meters", "스피커": "speaker", "찾은 것: ": "Found: ", ". 위치가 조금 어긋나면 점을 끌어 고치세요.": ". If a position is slightly off, drag the dots to fix it.", " (못 찾은 항목은 직접 맞추세요)": " (set the items not found by hand)", "찾지 못했습니다. 직접 점을 끌어 맞추세요.": "Nothing found. Drag the dots to fit manually.", "이미지를 열 수 없습니다": "Cannot open the image", "소리 분석 중…": "Analyzing audio…", "준비 완료": "Ready", "배경 이미지를 선택하세요": "Choose a background image", "음악 읽는 중…": "Reading music…", "음악을 읽을 수 없습니다: ": "Cannot read the music: ", "가사 파일": "Lyrics file", "가사 파일을 선택하세요.": "Choose a lyrics file.", "음악 파일 속에서 가사를 찾지 못했습니다.\n.srt / .lrc / .txt 가사 파일을 \"가사 파일\"로 선택해 주세요.": "No lyrics found inside the music file.\nPick a .srt / .lrc / .txt file as the \"Lyrics file\".", "음악을 선택하면 파일 속 가사를 찾아봅니다.": "After you choose music, lyrics inside the file are searched.", "\n가사 줄 수: ": "\nLyric lines: ", "영상 만드는 중… ": "Rendering video… ", "소리 인코딩 중…": "Encoding audio…", "이 브라우저는 영상 만들기를 지원하지 않습니다. 최신 Chrome 또는 Edge를 사용하세요.": "This browser cannot create videos. Use the latest Chrome or Edge.", "영상 만드는 중 (실시간)… ": "Rendering video (real time)… ", "빠른 방식을 쓸 수 없어 실시간 방식으로 만듭니다…": "Fast method unavailable; rendering in real time…", "완료! 아래 버튼으로 저장하세요 (": "Done! Save it with the button below (", "취소되었습니다": "Cancelled", "실패: ": "Failed: ", "저장했습니다: ": "Saved: ", "저장을 취소했습니다. 버튼을 다시 눌러 저장할 수 있습니다.": "Save cancelled. Press the button again to save.", "저장할 수 없습니다 (": "Cannot save (", "저장을 시작했습니다: ": "Download started: ", "스피커 추가": "Add speaker", "마지막 스피커 지우기": "Remove last speaker"}, "ja": {"단어 하이라이트 (틱톡·쇼츠)": "単語ハイライト(TikTok/ショート)", "라벨 박스 (둥근 박스)": "ラベルボックス(角丸)", "타자기 (한 글자씩)": "タイプライター(1文字ずつ)", "팝업 (통통 튀며 등장)": "ポップイン(弾んで登場)", "음악 + 배경 이미지 → 스펙트럼과 자막이 있는 MP4": "音楽 + 背景画像 → スペクトラムと歌詞付きMP4", "배경 이미지를 선택하면": "背景画像を選ぶと", "여기에 미리보기가 나타납니다": "ここにプレビューが表示されます", "점을 끌어 영역을 맞추세요 (노란색 = 막대, 하늘색 = VU 미터, 주황색 = 스피커). 끄는 동안 원본 사진과 확대경이 나타납니다. 안쪽을 끌면 이동, 막대는 빈 곳을 끌면 새 사각형이 만들어집니다.": "点をドラッグして領域を合わせます(黄=バー、水色=VUメーター、橙=スピーカー)。ドラッグ中は元の写真と拡大鏡が表示されます。図形の内側をドラッグで移動、空いた場所をドラッグするとバーの新しい四角形が作れます。", "파일": "ファイル", "음악 선택 (mp3, m4a, wav …)": "音楽を選ぶ (mp3, m4a, wav …)", "선택 안 됨": "未選択", "배경 이미지 선택": "背景画像を選ぶ", "영상 제목 (화면과 파일 이름에 쓰입니다)": "動画タイトル(画面とファイル名に使われます)", "화면과 막대": "画面とバー", "영상 크기": "動画サイズ", "세로 9:16 (1080×1920)": "縦 9:16 (1080×1920)", "가로 16:9 (1920×1080)": "横 16:9 (1920×1080)", "정사각형 1:1 (1080×1080)": "正方形 1:1 (1080×1080)", "막대 색": "バーの色", "Hi-fi (초록/하늘/파랑)": "Hi-fi (緑/水色/青)", "Fire (노랑/빨강)": "Fire (黄/赤)", "Neon (분홍/보라)": "Neon (ピンク/紫)", "Ice (흰색/파랑)": "Ice (白/青)", "McIntosh (하늘 → 초록 → 노랑 → 빨강)": "McIntosh (水色→緑→黄→赤)", "막대 개수": "バーの数", "이미지 위치": "画像の位置", "원래 있던 막대를 어둡게 가리기": "元のバーを暗く隠す", "킥(박자)에 화면 번쩍임": "キック(ビート)で画面を光らせる", "효과 (VU 미터 · 스피커)": "エフェクト(VUメーター・スピーカー)", "막대 스펙트럼 표시": "バースペクトラムを表示", "VU 미터 바늘 (미터 창 두 곳을 맞추세요)": "VUメーターの針(メーター窓2か所を合わせてください)", "스피커 진동 (스피커 중심과 크기를 맞추세요)": "スピーカーの振動(中心とサイズを合わせてください)", "스피커 진동 세기": "スピーカー振動の強さ", "VU 바늘은 사진 속 미터 창을 새 눈금판으로 덮고 그 위에서 움직입니다. 네 모서리를 각각 끌어 사진 속 미터 창의 기울기(원근)에 맞출 수 있습니다. 왼쪽 미터는 저음, 오른쪽 미터는 중·고음에 반응합니다. 스피커는 베이스(킥)가 칠 때마다 콘이 안쪽으로 울립니다.": "VUの針は、写真のメーター窓を覆う新しい文字盤の上で動きます。四隅をそれぞれドラッグして、窓の傾き(遠近)に合わせられます。左のメーターは低音、右は中高音に反応します。スピーカーはベース(キック)のたびにコーンが内側に振動します。", "영역 맞추기": "領域を合わせる", "정렬 보기 (원본 사진 + 격자선)": "整列表示(元の写真 + 格子線)", "미세 조정 대상": "微調整の対象", "막대 왼쪽 위": "バー:左上", "막대 오른쪽 위": "バー:右上", "막대 오른쪽 아래": "バー:右下", "막대 왼쪽 아래": "バー:左下", "막대 전체 이동": "バー全体を移動", "VU 왼쪽 이동": "左VUを移動", "VU 오른쪽 이동": "右VUを移動", "스피커 이동": "スピーカーを移動", "이동 단위": "移動単位", "작게": "小", "보통": "中", "크게": "大", "영역 키우기": "領域を拡大", "영역 줄이기": "領域を縮小", "초기화": "リセット", "사진에서 자동으로 찾기 (막대 · VU · 스피커)": "写真から自動検出(バー・VU・スピーカー)", "자막": "歌詞表示", "자막 종류": "歌詞のスタイル", "랙 패널 (제목 + 앞뒤 가사)": "ラックパネル(タイトル + 前後の歌詞)", "큰 가사 한 줄 (윤곽선)": "大きな歌詞1行(縁取り)", "영화 자막": "映画風字幕", "네온 (빛나는 글씨)": "ネオン(光る文字)", "자막 위치 (위 0% ~ 아래 100%)": "歌詞の位置(上0%〜下100%)", "가사 뒤 어둡게 (0% = 사진 그대로)": "歌詞の背景を暗く(0% = 写真そのまま)", "글꼴": "フォント", "고딕 굵게": "ゴシック太字", "좁은 고딕 굵게": "細身ゴシック太字", "명조 굵게": "明朝太字", "고정폭 굵게": "等幅太字", "글자 색": "文字色", "흰색": "白", "노랑": "黄", "하늘": "水色", "초록": "緑", "분홍": "ピンク", "주황": "オレンジ", "글자 크기": "文字サイズ", "강조 단어 (쉼표로 구분, 포함된 줄은 초록색)": "強調する単語(カンマ区切り、含む行は緑色)", "곡 제목 표시": "曲名を表示", "[Chorus] 같은 구간 이름 표시": "[Chorus] などのセクション名を表示", "진행 막대와 시간 표시": "進行バーと時間を表示", "가사": "歌詞", "가사 출처": "歌詞の取得元", "자동: 음악 파일 속 가사 태그": "自動:音楽ファイル内の歌詞タグ", "가사 파일 (.srt .lrc .txt)": "歌詞ファイル (.srt .lrc .txt)", "가사 없음": "歌詞なし", "가사 파일 선택": "歌詞ファイルを選ぶ", "노래 시작(초)": "歌の開始(秒)", "노래 끝(초)": "歌の終了(秒)", "타이밍 없는 가사는 곡 길이에 맞춰 균등 배분됩니다. 시작·끝 초를 알면 입력하세요.": "タイミングのない歌詞は曲の長さに合わせて均等に配分されます。開始・終了秒がわかれば入力してください。", "가사를 읽으면 여기에 결과가 표시됩니다.": "歌詞を読み込むと、結果がここに表示されます。", "MP4 만들기": "MP4を作成", "빠른 모드 (24fps, 2/3 해상도)": "高速モード(24fps、解像度2/3)", "취소": "キャンセル", "음악과 이미지를 선택하세요": "音楽と画像を選んでください", "완성된 영상 저장": "完成した動画を保存", "만드는 동안 이 탭을 열어 두세요. 최신 Chrome/Edge에서는 실시간보다 빠르게 만들고, 그렇지 않은 브라우저에서는 곡 길이만큼 걸립니다.": "作成中はこのタブを開いたままにしてください。最新のChrome/Edgeではリアルタイムより速く作成され、他のブラウザでは曲の長さ分かかります。", "영상 미리보기": "動画プレビュー", "재생 또는 일시정지": "再生または一時停止", "재생 위치": "再生位置", "왼쪽": "左", "오른쪽": "右", "위": "上", "아래": "下", "예: BOOM, PUNCH": "例: BOOM, PUNCH", "비우면 처음": "空欄 = 最初", "비우면 끝": "空欄 = 最後", "음악 파일 속 가사": "音楽ファイル内の歌詞", "타이밍 있음": "タイミングあり", "타이밍 없음: 곡 길이에 맞춰 균등 배분": "タイミングなし:曲の長さに合わせて均等配分", "먼저 배경 이미지를 선택하세요.": "先に背景画像を選んでください。", "막대": "バー", "VU 2개": "VU 2つ", "스피커": "スピーカー", "찾은 것: ": "見つかったもの: ", ". 위치가 조금 어긋나면 점을 끌어 고치세요.": "。位置が少しずれていたら、点をドラッグして直してください。", " (못 찾은 항목은 직접 맞추세요)": "(見つからなかった項目は手動で合わせてください)", "찾지 못했습니다. 직접 점을 끌어 맞추세요.": "見つかりませんでした。点をドラッグして手動で合わせてください。", "이미지를 열 수 없습니다": "画像を開けません", "소리 분석 중…": "音声を解析中…", "준비 완료": "準備完了", "배경 이미지를 선택하세요": "背景画像を選んでください", "음악 읽는 중…": "音楽を読み込み中…", "음악을 읽을 수 없습니다: ": "音楽を読み込めません: ", "가사 파일": "歌詞ファイル", "가사 파일을 선택하세요.": "歌詞ファイルを選んでください。", "음악 파일 속에서 가사를 찾지 못했습니다.\n.srt / .lrc / .txt 가사 파일을 \"가사 파일\"로 선택해 주세요.": "音楽ファイル内に歌詞が見つかりませんでした。\n.srt / .lrc / .txt の歌詞ファイルを「歌詞ファイル」として選んでください。", "음악을 선택하면 파일 속 가사를 찾아봅니다.": "音楽を選ぶと、ファイル内の歌詞を探します。", "\n가사 줄 수: ": "\n歌詞の行数: ", "영상 만드는 중… ": "動画を作成中… ", "소리 인코딩 중…": "音声をエンコード中…", "이 브라우저는 영상 만들기를 지원하지 않습니다. 최신 Chrome 또는 Edge를 사용하세요.": "このブラウザは動画作成に対応していません。最新のChromeまたはEdgeをお使いください。", "영상 만드는 중 (실시간)… ": "動画を作成中(リアルタイム)… ", "빠른 방식을 쓸 수 없어 실시간 방식으로 만듭니다…": "高速方式が使えないため、リアルタイム方式で作成します…", "완료! 아래 버튼으로 저장하세요 (": "完了!下のボタンで保存してください(", "취소되었습니다": "キャンセルしました", "실패: ": "失敗: ", "저장했습니다: ": "保存しました: ", "저장을 취소했습니다. 버튼을 다시 눌러 저장할 수 있습니다.": "保存をキャンセルしました。ボタンをもう一度押すと保存できます。", "저장할 수 없습니다 (": "保存できません(", "저장을 시작했습니다: ": "保存を開始しました: ", "스피커 추가": "スピーカーを追加", "마지막 스피커 지우기": "最後のスピーカーを削除"}, "zh": {"단어 하이라이트 (틱톡·쇼츠)": "单词高亮(抖音/Shorts)", "라벨 박스 (둥근 박스)": "标签框(圆角)", "타자기 (한 글자씩)": "打字机(逐字出现)", "팝업 (통통 튀며 등장)": "弹出(弹跳出现)", "음악 + 배경 이미지 → 스펙트럼과 자막이 있는 MP4": "音乐 + 背景图片 → 带频谱和歌词的MP4", "배경 이미지를 선택하면": "选择背景图片后", "여기에 미리보기가 나타납니다": "预览将显示在这里", "점을 끌어 영역을 맞추세요 (노란색 = 막대, 하늘색 = VU 미터, 주황색 = 스피커). 끄는 동안 원본 사진과 확대경이 나타납니다. 안쪽을 끌면 이동, 막대는 빈 곳을 끌면 새 사각형이 만들어집니다.": "拖动圆点来对齐区域(黄色=频谱条,青色=VU表,橙色=扬声器)。拖动时会显示原图和放大镜。拖动形状内部可移动,在空白处拖动可新建频谱条矩形。", "파일": "文件", "음악 선택 (mp3, m4a, wav …)": "选择音乐 (mp3, m4a, wav …)", "선택 안 됨": "未选择", "배경 이미지 선택": "选择背景图片", "영상 제목 (화면과 파일 이름에 쓰입니다)": "视频标题(显示在画面上并用作文件名)", "화면과 막대": "画面与频谱条", "영상 크기": "视频尺寸", "세로 9:16 (1080×1920)": "竖屏 9:16 (1080×1920)", "가로 16:9 (1920×1080)": "横屏 16:9 (1920×1080)", "정사각형 1:1 (1080×1080)": "正方形 1:1 (1080×1080)", "막대 색": "频谱条颜色", "Hi-fi (초록/하늘/파랑)": "Hi-fi (绿/青/蓝)", "Fire (노랑/빨강)": "Fire (黄/红)", "Neon (분홍/보라)": "Neon (粉/紫)", "Ice (흰색/파랑)": "Ice (白/蓝)", "McIntosh (하늘 → 초록 → 노랑 → 빨강)": "McIntosh (青→绿→黄→红)", "막대 개수": "频谱条数量", "이미지 위치": "图片位置", "원래 있던 막대를 어둡게 가리기": "遮暗照片中原有的频谱条", "킥(박자)에 화면 번쩍임": "底鼓(节拍)时画面闪烁", "효과 (VU 미터 · 스피커)": "特效(VU表 · 扬声器)", "막대 스펙트럼 표시": "显示频谱条", "VU 미터 바늘 (미터 창 두 곳을 맞추세요)": "VU表指针(请对齐两个表窗)", "스피커 진동 (스피커 중심과 크기를 맞추세요)": "扬声器震动(请设定扬声器中心和大小)", "스피커 진동 세기": "扬声器震动强度", "VU 바늘은 사진 속 미터 창을 새 눈금판으로 덮고 그 위에서 움직입니다. 네 모서리를 각각 끌어 사진 속 미터 창의 기울기(원근)에 맞출 수 있습니다. 왼쪽 미터는 저음, 오른쪽 미터는 중·고음에 반응합니다. 스피커는 베이스(킥)가 칠 때마다 콘이 안쪽으로 울립니다.": "VU指针会在覆盖照片表窗的新表盘上摆动。可分别拖动四个角,匹配表窗的倾斜(透视)。左表对低音反应,右表对中高音反应。每次低音(底鼓)时,扬声器锥盆会向内震动。", "영역 맞추기": "对齐区域", "정렬 보기 (원본 사진 + 격자선)": "对齐视图(原图 + 网格线)", "미세 조정 대상": "微调对象", "막대 왼쪽 위": "频谱条:左上", "막대 오른쪽 위": "频谱条:右上", "막대 오른쪽 아래": "频谱条:右下", "막대 왼쪽 아래": "频谱条:左下", "막대 전체 이동": "整体移动频谱条", "VU 왼쪽 이동": "移动左VU表", "VU 오른쪽 이동": "移动右VU表", "스피커 이동": "移动扬声器", "이동 단위": "移动步长", "작게": "小", "보통": "中", "크게": "大", "영역 키우기": "放大区域", "영역 줄이기": "缩小区域", "초기화": "重置", "사진에서 자동으로 찾기 (막대 · VU · 스피커)": "从照片自动识别(频谱条 · VU表 · 扬声器)", "자막": "歌词样式", "자막 종류": "歌词样式", "랙 패널 (제목 + 앞뒤 가사)": "机架面板(标题 + 前后歌词)", "큰 가사 한 줄 (윤곽선)": "大号单行歌词(描边)", "영화 자막": "电影字幕", "네온 (빛나는 글씨)": "霓虹(发光文字)", "자막 위치 (위 0% ~ 아래 100%)": "歌词位置(顶部0% ~ 底部100%)", "가사 뒤 어둡게 (0% = 사진 그대로)": "歌词背景变暗(0% = 保持原图)", "글꼴": "字体", "고딕 굵게": "黑体加粗", "좁은 고딕 굵게": "窄黑体加粗", "명조 굵게": "宋体加粗", "고정폭 굵게": "等宽加粗", "글자 색": "文字颜色", "흰색": "白色", "노랑": "黄色", "하늘": "青色", "초록": "绿色", "분홍": "粉色", "주황": "橙色", "글자 크기": "文字大小", "강조 단어 (쉼표로 구분, 포함된 줄은 초록색)": "强调词(逗号分隔,包含的行显示为绿色)", "곡 제목 표시": "显示歌曲标题", "[Chorus] 같은 구간 이름 표시": "显示 [Chorus] 等段落名称", "진행 막대와 시간 표시": "显示进度条和时间", "가사": "歌词", "가사 출처": "歌词来源", "자동: 음악 파일 속 가사 태그": "自动:音乐文件内的歌词标签", "가사 파일 (.srt .lrc .txt)": "歌词文件 (.srt .lrc .txt)", "가사 없음": "无歌词", "가사 파일 선택": "选择歌词文件", "노래 시작(초)": "歌曲开始(秒)", "노래 끝(초)": "歌曲结束(秒)", "타이밍 없는 가사는 곡 길이에 맞춰 균등 배분됩니다. 시작·끝 초를 알면 입력하세요.": "没有时间轴的歌词会按歌曲时长平均分配。如果知道开始和结束秒数,请填写。", "가사를 읽으면 여기에 결과가 표시됩니다.": "读取歌词后,结果会显示在这里。", "MP4 만들기": "生成MP4", "빠른 모드 (24fps, 2/3 해상도)": "快速模式(24fps,2/3分辨率)", "취소": "取消", "음악과 이미지를 선택하세요": "请选择音乐和图片", "완성된 영상 저장": "保存完成的视频", "만드는 동안 이 탭을 열어 두세요. 최신 Chrome/Edge에서는 실시간보다 빠르게 만들고, 그렇지 않은 브라우저에서는 곡 길이만큼 걸립니다.": "生成期间请保持此标签页打开。最新版Chrome/Edge生成速度快于实时,其他浏览器则需要与歌曲时长相同的时间。", "영상 미리보기": "视频预览", "재생 또는 일시정지": "播放或暂停", "재생 위치": "播放位置", "왼쪽": "左", "오른쪽": "右", "위": "上", "아래": "下", "예: BOOM, PUNCH": "例如: BOOM, PUNCH", "비우면 처음": "留空 = 从头", "비우면 끝": "留空 = 到结尾", "음악 파일 속 가사": "音乐文件内的歌词", "타이밍 있음": "有时间轴", "타이밍 없음: 곡 길이에 맞춰 균등 배분": "无时间轴:按歌曲时长平均分配", "먼저 배경 이미지를 선택하세요.": "请先选择背景图片。", "막대": "频谱条", "VU 2개": "2个VU表", "스피커": "扬声器", "찾은 것: ": "已找到:", ". 위치가 조금 어긋나면 점을 끌어 고치세요.": "。如果位置略有偏差,请拖动圆点修正。", " (못 찾은 항목은 직접 맞추세요)": "(未找到的项目请手动对齐)", "찾지 못했습니다. 직접 점을 끌어 맞추세요.": "未找到。请手动拖动圆点对齐。", "이미지를 열 수 없습니다": "无法打开图片", "소리 분석 중…": "正在分析音频…", "준비 완료": "准备就绪", "배경 이미지를 선택하세요": "请选择背景图片", "음악 읽는 중…": "正在读取音乐…", "음악을 읽을 수 없습니다: ": "无法读取音乐:", "가사 파일": "歌词文件", "가사 파일을 선택하세요.": "请选择歌词文件。", "음악 파일 속에서 가사를 찾지 못했습니다.\n.srt / .lrc / .txt 가사 파일을 \"가사 파일\"로 선택해 주세요.": "在音乐文件中未找到歌词。\n请选择 .srt / .lrc / .txt 歌词文件作为“歌词文件”。", "음악을 선택하면 파일 속 가사를 찾아봅니다.": "选择音乐后会查找文件内的歌词。", "\n가사 줄 수: ": "\n歌词行数:", "영상 만드는 중… ": "正在生成视频… ", "소리 인코딩 중…": "正在编码音频…", "이 브라우저는 영상 만들기를 지원하지 않습니다. 최신 Chrome 또는 Edge를 사용하세요.": "此浏览器不支持生成视频。请使用最新版Chrome或Edge。", "영상 만드는 중 (실시간)… ": "正在生成视频(实时)… ", "빠른 방식을 쓸 수 없어 실시간 방식으로 만듭니다…": "无法使用快速方式,改用实时方式生成…", "완료! 아래 버튼으로 저장하세요 (": "完成!请用下方按钮保存(", "취소되었습니다": "已取消", "실패: ": "失败:", "저장했습니다: ": "已保存:", "저장을 취소했습니다. 버튼을 다시 눌러 저장할 수 있습니다.": "已取消保存。再次点击按钮即可保存。", "저장할 수 없습니다 (": "无法保存(", "저장을 시작했습니다: ": "已开始保存:", "스피커 추가": "添加扬声器", "마지막 스피커 지우기": "删除最后一个扬声器"}, "es": {"단어 하이라이트 (틱톡·쇼츠)": "Palabra resaltada (TikTok/Shorts)", "라벨 박스 (둥근 박스)": "Caja de etiqueta (redondeada)", "타자기 (한 글자씩)": "Máquina de escribir (letra a letra)", "팝업 (통통 튀며 등장)": "Pop-in (con rebote)", "음악 + 배경 이미지 → 스펙트럼과 자막이 있는 MP4": "Música + imagen de fondo → MP4 con espectro y letras", "배경 이미지를 선택하면": "Al elegir una imagen de fondo", "여기에 미리보기가 나타납니다": "la vista previa aparecerá aquí", "점을 끌어 영역을 맞추세요 (노란색 = 막대, 하늘색 = VU 미터, 주황색 = 스피커). 끄는 동안 원본 사진과 확대경이 나타납니다. 안쪽을 끌면 이동, 막대는 빈 곳을 끌면 새 사각형이 만들어집니다.": "Arrastra los puntos para ajustar cada zona (amarillo = barras, cian = vúmetros, naranja = altavoz). Mientras arrastras se muestran la foto original y una lupa. Arrastra dentro de una forma para moverla; en un espacio vacío se dibuja un nuevo rectángulo de barras.", "파일": "Archivos", "음악 선택 (mp3, m4a, wav …)": "Elegir música (mp3, m4a, wav …)", "선택 안 됨": "Nada seleccionado", "배경 이미지 선택": "Elegir imagen de fondo", "영상 제목 (화면과 파일 이름에 쓰입니다)": "Título del vídeo (se muestra en pantalla y se usa como nombre de archivo)", "화면과 막대": "Pantalla y barras", "영상 크기": "Tamaño del vídeo", "세로 9:16 (1080×1920)": "Vertical 9:16 (1080×1920)", "가로 16:9 (1920×1080)": "Horizontal 16:9 (1920×1080)", "정사각형 1:1 (1080×1080)": "Cuadrado 1:1 (1080×1080)", "막대 색": "Color de las barras", "Hi-fi (초록/하늘/파랑)": "Hi-fi (verde/cian/azul)", "Fire (노랑/빨강)": "Fire (amarillo/rojo)", "Neon (분홍/보라)": "Neon (rosa/morado)", "Ice (흰색/파랑)": "Ice (blanco/azul)", "McIntosh (하늘 → 초록 → 노랑 → 빨강)": "McIntosh (cian → verde → amarillo → rojo)", "막대 개수": "Número de barras", "이미지 위치": "Posición de la imagen", "원래 있던 막대를 어둡게 가리기": "Oscurecer las barras originales de la foto", "킥(박자)에 화면 번쩍임": "Destello de pantalla con el bombo (ritmo)", "효과 (VU 미터 · 스피커)": "Efectos (vúmetros · altavoz)", "막대 스펙트럼 표시": "Mostrar barras de espectro", "VU 미터 바늘 (미터 창 두 곳을 맞추세요)": "Agujas de vúmetro (ajusta las dos ventanas)", "스피커 진동 (스피커 중심과 크기를 맞추세요)": "Pulso del altavoz (ajusta centro y tamaño)", "스피커 진동 세기": "Intensidad del pulso del altavoz", "VU 바늘은 사진 속 미터 창을 새 눈금판으로 덮고 그 위에서 움직입니다. 네 모서리를 각각 끌어 사진 속 미터 창의 기울기(원근)에 맞출 수 있습니다. 왼쪽 미터는 저음, 오른쪽 미터는 중·고음에 반응합니다. 스피커는 베이스(킥)가 칠 때마다 콘이 안쪽으로 울립니다.": "Las agujas se mueven sobre una nueva esfera que cubre la ventana del vúmetro de la foto. Arrastra cada esquina para igualar la inclinación (perspectiva). El vúmetro izquierdo reacciona a los graves y el derecho a medios y agudos. El cono del altavoz se hunde con cada golpe de bombo.", "영역 맞추기": "Ajustar zonas", "정렬 보기 (원본 사진 + 격자선)": "Vista de alineación (foto original + cuadrícula)", "미세 조정 대상": "Objeto de ajuste fino", "막대 왼쪽 위": "Barras: arriba izq.", "막대 오른쪽 위": "Barras: arriba der.", "막대 오른쪽 아래": "Barras: abajo der.", "막대 왼쪽 아래": "Barras: abajo izq.", "막대 전체 이동": "Mover todas las barras", "VU 왼쪽 이동": "Mover VU izquierdo", "VU 오른쪽 이동": "Mover VU derecho", "스피커 이동": "Mover altavoz", "이동 단위": "Tamaño del paso", "작게": "Pequeño", "보통": "Medio", "크게": "Grande", "영역 키우기": "Agrandar zona", "영역 줄이기": "Reducir zona", "초기화": "Restablecer", "사진에서 자동으로 찾기 (막대 · VU · 스피커)": "Detectar automáticamente en la foto (barras · VU · altavoz)", "자막": "Letras", "자막 종류": "Estilo de letras", "랙 패널 (제목 + 앞뒤 가사)": "Panel de rack (título + líneas anterior/siguiente)", "큰 가사 한 줄 (윤곽선)": "Línea grande única (con contorno)", "영화 자막": "Subtítulo de cine", "네온 (빛나는 글씨)": "Neón (texto brillante)", "자막 위치 (위 0% ~ 아래 100%)": "Posición de la letra (arriba 0% – abajo 100%)", "가사 뒤 어둡게 (0% = 사진 그대로)": "Oscurecer tras la letra (0% = foto tal cual)", "글꼴": "Fuente", "고딕 굵게": "Sans negrita", "좁은 고딕 굵게": "Sans condensada negrita", "명조 굵게": "Serif negrita", "고정폭 굵게": "Monoespaciada negrita", "글자 색": "Color del texto", "흰색": "Blanco", "노랑": "Amarillo", "하늘": "Cian", "초록": "Verde", "분홍": "Rosa", "주황": "Naranja", "글자 크기": "Tamaño del texto", "강조 단어 (쉼표로 구분, 포함된 줄은 초록색)": "Palabras destacadas (separadas por comas; las líneas que las contienen se ponen verdes)", "곡 제목 표시": "Mostrar título de la canción", "[Chorus] 같은 구간 이름 표시": "Mostrar nombres de sección como [Chorus]", "진행 막대와 시간 표시": "Mostrar barra de progreso y tiempo", "가사": "Letra", "가사 출처": "Origen de la letra", "자동: 음악 파일 속 가사 태그": "Auto: etiqueta de letra dentro del archivo de música", "가사 파일 (.srt .lrc .txt)": "Archivo de letra (.srt .lrc .txt)", "가사 없음": "Sin letra", "가사 파일 선택": "Elegir archivo de letra", "노래 시작(초)": "Inicio de la canción (s)", "노래 끝(초)": "Fin de la canción (s)", "타이밍 없는 가사는 곡 길이에 맞춰 균등 배분됩니다. 시작·끝 초를 알면 입력하세요.": "La letra sin tiempos se reparte uniformemente según la duración. Si conoces los segundos de inicio y fin, introdúcelos.", "가사를 읽으면 여기에 결과가 표시됩니다.": "Aquí aparecerá el resultado al leer la letra.", "MP4 만들기": "Crear MP4", "빠른 모드 (24fps, 2/3 해상도)": "Modo rápido (24 fps, 2/3 de resolución)", "취소": "Cancelar", "음악과 이미지를 선택하세요": "Elige música e imagen", "완성된 영상 저장": "Guardar el vídeo terminado", "만드는 동안 이 탭을 열어 두세요. 최신 Chrome/Edge에서는 실시간보다 빠르게 만들고, 그렇지 않은 브라우저에서는 곡 길이만큼 걸립니다.": "Mantén esta pestaña abierta mientras se genera. Chrome/Edge recientes van más rápido que el tiempo real; otros navegadores tardan lo que dura la canción.", "영상 미리보기": "Vista previa del vídeo", "재생 또는 일시정지": "Reproducir o pausar", "재생 위치": "Posición de reproducción", "왼쪽": "Izquierda", "오른쪽": "Derecha", "위": "Arriba", "아래": "Abajo", "예: BOOM, PUNCH": "p. ej.: BOOM, PUNCH", "비우면 처음": "Vacío = inicio", "비우면 끝": "Vacío = final", "음악 파일 속 가사": "Letra dentro del archivo de música", "타이밍 있음": "con tiempos", "타이밍 없음: 곡 길이에 맞춰 균등 배분": "sin tiempos: repartida uniformemente", "먼저 배경 이미지를 선택하세요.": "Primero elige una imagen de fondo.", "막대": "barras", "VU 2개": "2 vúmetros", "스피커": "altavoz", "찾은 것: ": "Encontrado: ", ". 위치가 조금 어긋나면 점을 끌어 고치세요.": ". Si alguna posición no es exacta, arrastra los puntos para corregirla.", " (못 찾은 항목은 직접 맞추세요)": " (ajusta a mano lo que no se encontró)", "찾지 못했습니다. 직접 점을 끌어 맞추세요.": "No se encontró nada. Arrastra los puntos manualmente.", "이미지를 열 수 없습니다": "No se puede abrir la imagen", "소리 분석 중…": "Analizando audio…", "준비 완료": "Listo", "배경 이미지를 선택하세요": "Elige una imagen de fondo", "음악 읽는 중…": "Leyendo música…", "음악을 읽을 수 없습니다: ": "No se puede leer la música: ", "가사 파일": "Archivo de letra", "가사 파일을 선택하세요.": "Elige un archivo de letra.", "음악 파일 속에서 가사를 찾지 못했습니다.\n.srt / .lrc / .txt 가사 파일을 \"가사 파일\"로 선택해 주세요.": "No se encontró letra dentro del archivo de música.\nElige un archivo .srt / .lrc / .txt como \"Archivo de letra\".", "음악을 선택하면 파일 속 가사를 찾아봅니다.": "Al elegir música se buscará la letra dentro del archivo.", "\n가사 줄 수: ": "\nLíneas de letra: ", "영상 만드는 중… ": "Generando vídeo… ", "소리 인코딩 중…": "Codificando audio…", "이 브라우저는 영상 만들기를 지원하지 않습니다. 최신 Chrome 또는 Edge를 사용하세요.": "Este navegador no puede crear vídeos. Usa la última versión de Chrome o Edge.", "영상 만드는 중 (실시간)… ": "Generando vídeo (tiempo real)… ", "빠른 방식을 쓸 수 없어 실시간 방식으로 만듭니다…": "Método rápido no disponible; se genera en tiempo real…", "완료! 아래 버튼으로 저장하세요 (": "¡Listo! Guárdalo con el botón de abajo (", "취소되었습니다": "Cancelado", "실패: ": "Error: ", "저장했습니다: ": "Guardado: ", "저장을 취소했습니다. 버튼을 다시 눌러 저장할 수 있습니다.": "Guardado cancelado. Vuelve a pulsar el botón para guardar.", "저장할 수 없습니다 (": "No se puede guardar (", "저장을 시작했습니다: ": "Descarga iniciada: ", "스피커 추가": "Añadir altavoz", "마지막 스피커 지우기": "Quitar el último altavoz"}};
+const I18N={"en":{"단어 하이라이트 (틱톡·쇼츠)":"Word highlight (TikTok/Shorts)","라벨 박스 (둥근 박스)":"Label box (rounded)","타자기 (한 글자씩)":"Typewriter (letter by letter)","팝업 (통통 튀며 등장)":"Pop-in (bouncy)","음악 + 배경 이미지 → 스펙트럼과 자막이 있는 MP4":"Music + background image → MP4 with spectrum and lyrics","배경 이미지를 선택하면":"Choose a background image","여기에 미리보기가 나타납니다":"and the preview appears here","점을 끌어 영역을 맞추세요 (노란색 = 막대, 하늘색 = VU 미터, 주황색 = 스피커). 끄는 동안 원본 사진과 확대경이 나타납니다. 안쪽을 끌면 이동, 막대는 빈 곳을 끌면 새 사각형이 만들어집니다.":"Drag the dots to fit each area (yellow = bars, cyan = VU meters, orange = speaker). The original photo and a magnifier appear while dragging. Drag inside a shape to move it; dragging an empty spot draws a new bar rectangle.","파일":"Files","음악 선택 (mp3, m4a, wav …)":"Choose music (mp3, m4a, wav …)","선택 안 됨":"Nothing selected","배경 이미지 선택":"Choose background image","영상 제목 (화면과 파일 이름에 쓰입니다)":"Video title (shown on screen and used as file name)","화면과 막대":"Screen & bars","영상 크기":"Video size","세로 9:16 (1080×1920)":"Portrait 9:16 (1080×1920)","가로 16:9 (1920×1080)":"Landscape 16:9 (1920×1080)","정사각형 1:1 (1080×1080)":"Square 1:1 (1080×1080)","막대 색":"Bar colors","Hi-fi (초록/하늘/파랑)":"Hi-fi (green/cyan/blue)","Fire (노랑/빨강)":"Fire (yellow/red)","Neon (분홍/보라)":"Neon (pink/purple)","Ice (흰색/파랑)":"Ice (white/blue)","McIntosh (하늘 → 초록 → 노랑 → 빨강)":"McIntosh (cyan → green → yellow → red)","막대 개수":"Number of bars","이미지 위치":"Image position","원래 있던 막대를 어둡게 가리기":"Darken the original bars in the photo","킥(박자)에 화면 번쩍임":"Flash the screen on kick (beat)","효과 (VU 미터 · 스피커)":"Effects (VU meters · speaker)","막대 스펙트럼 표시":"Show spectrum bars","VU 미터 바늘 (미터 창 두 곳을 맞추세요)":"VU meter needles (fit the two meter windows)","스피커 진동 (스피커 중심과 크기를 맞추세요)":"Speaker pulse (set speaker center and size)","스피커 진동 세기":"Speaker pulse strength","VU 바늘은 사진 속 미터 창을 새 눈금판으로 덮고 그 위에서 움직입니다. 네 모서리를 각각 끌어 사진 속 미터 창의 기울기(원근)에 맞출 수 있습니다. 왼쪽 미터는 저음, 오른쪽 미터는 중·고음에 반응합니다. 스피커는 베이스(킥)가 칠 때마다 콘이 안쪽으로 울립니다.":"The VU needles move on a new dial that covers the meter window in the photo. Drag each of the four corners to match the window's tilt (perspective). The left meter reacts to bass, the right meter to mids and highs. The speaker cone pushes inward on every bass (kick) hit.","영역 맞추기":"Align areas","정렬 보기 (원본 사진 + 격자선)":"Alignment view (original photo + grid)","미세 조정 대상":"Fine-tune target","막대 왼쪽 위":"Bars: top-left","막대 오른쪽 위":"Bars: top-right","막대 오른쪽 아래":"Bars: bottom-right","막대 왼쪽 아래":"Bars: bottom-left","막대 전체 이동":"Move all bars","VU 왼쪽 이동":"Move left VU","VU 오른쪽 이동":"Move right VU","스피커 이동":"Move speaker","이동 단위":"Step size","작게":"Small","보통":"Medium","크게":"Large","영역 키우기":"Grow area","영역 줄이기":"Shrink area","초기화":"Reset","사진에서 자동으로 찾기 (막대 · VU · 스피커)":"Auto-detect from photo (bars · VU · speaker)","자막":"Lyrics style","자막 종류":"Lyrics style","랙 패널 (제목 + 앞뒤 가사)":"Rack panel (title + previous/next lines)","큰 가사 한 줄 (윤곽선)":"Big single line (outlined)","영화 자막":"Movie subtitle","네온 (빛나는 글씨)":"Neon (glowing text)","자막 위치 (위 0% ~ 아래 100%)":"Lyrics position (top 0% – bottom 100%)","가사 뒤 어둡게 (0% = 사진 그대로)":"Darken behind lyrics (0% = photo as is)","글꼴":"Font","고딕 굵게":"Sans bold","좁은 고딕 굵게":"Condensed sans bold","명조 굵게":"Serif bold","고정폭 굵게":"Monospace bold","글자 색":"Text color","흰색":"White","노랑":"Yellow","하늘":"Cyan","초록":"Green","분홍":"Pink","주황":"Orange","글자 크기":"Text size","강조 단어 (쉼표로 구분, 포함된 줄은 초록색)":"Highlight words (comma-separated; lines containing them turn green)","곡 제목 표시":"Show song title","[Chorus] 같은 구간 이름 표시":"Show section names like [Chorus]","진행 막대와 시간 표시":"Show progress bar and time","가사":"Lyrics","가사 출처":"Lyrics source","자동: 음악 파일 속 가사 태그":"Auto: lyrics tag inside the music file","가사 파일 (.srt .lrc .txt)":"Lyrics file (.srt .lrc .txt)","가사 없음":"No lyrics","가사 파일 선택":"Choose lyrics file","노래 시작(초)":"Song start (sec)","노래 끝(초)":"Song end (sec)","타이밍 없는 가사는 곡 길이에 맞춰 균등 배분됩니다. 시작·끝 초를 알면 입력하세요.":"Lyrics without timing are spread evenly over the song length. Enter start/end seconds if you know them.","가사를 읽으면 여기에 결과가 표시됩니다.":"Lyrics loading results appear here.","MP4 만들기":"Create MP4","빠른 모드 (24fps, 2/3 해상도)":"Fast mode (24 fps, 2/3 resolution)","취소":"Cancel","음악과 이미지를 선택하세요":"Choose music and an image","완성된 영상 저장":"Save finished video","만드는 동안 이 탭을 열어 두세요. 최신 Chrome/Edge에서는 실시간보다 빠르게 만들고, 그렇지 않은 브라우저에서는 곡 길이만큼 걸립니다.":"Keep this tab open while it renders. Recent Chrome/Edge render faster than real time; other browsers take as long as the song.","영상 미리보기":"Video preview","재생 또는 일시정지":"Play or pause","재생 위치":"Playback position","왼쪽":"Left","오른쪽":"Right","위":"Up","아래":"Down","예: BOOM, PUNCH":"e.g. BOOM, PUNCH","비우면 처음":"Empty = start","비우면 끝":"Empty = end","음악 파일 속 가사":"Lyrics in music file","타이밍 있음":"timed","타이밍 없음: 곡 길이에 맞춰 균등 배분":"no timing: spread evenly over the song","먼저 배경 이미지를 선택하세요.":"Choose a background image first.","막대":"bars","VU 2개":"2 VU meters","스피커":"speaker","찾은 것: ":"Found: ",". 위치가 조금 어긋나면 점을 끌어 고치세요.":". If a position is slightly off, drag the dots to fix it."," (못 찾은 항목은 직접 맞추세요)":" (set the items not found by hand)","찾지 못했습니다. 직접 점을 끌어 맞추세요.":"Nothing found. Drag the dots to fit manually.","이미지를 열 수 없습니다":"Cannot open the image","소리 분석 중…":"Analyzing audio…","준비 완료":"Ready","배경 이미지를 선택하세요":"Choose a background image","음악 읽는 중…":"Reading music…","음악을 읽을 수 없습니다: ":"Cannot read the music: ","가사 파일":"Lyrics file","가사 파일을 선택하세요.":"Choose a lyrics file.","음악 파일 속에서 가사를 찾지 못했습니다.\n.srt / .lrc / .txt 가사 파일을 \"가사 파일\"로 선택해 주세요.":"No lyrics found inside the music file.\nPick a .srt / .lrc / .txt file as the \"Lyrics file\".","음악을 선택하면 파일 속 가사를 찾아봅니다.":"After you choose music, lyrics inside the file are searched.","\n가사 줄 수: ":"\nLyric lines: ","영상 만드는 중… ":"Rendering video… ","소리 인코딩 중…":"Encoding audio…","이 브라우저는 영상 만들기를 지원하지 않습니다. 최신 Chrome 또는 Edge를 사용하세요.":"This browser cannot create videos. Use the latest Chrome or Edge.","영상 만드는 중 (실시간)… ":"Rendering video (real time)… ","빠른 방식을 쓸 수 없어 실시간 방식으로 만듭니다…":"Fast method unavailable; rendering in real time…","완료! 아래 버튼으로 저장하세요 (":"Done! Save it with the button below (","취소되었습니다":"Cancelled","실패: ":"Failed: ","저장했습니다: ":"Saved: ","저장을 취소했습니다. 버튼을 다시 눌러 저장할 수 있습니다.":"Save cancelled. Press the button again to save.","저장할 수 없습니다 (":"Cannot save (","저장을 시작했습니다: ":"Download started: ","스피커 추가":"Add speaker","마지막 스피커 지우기":"Remove last speaker","원본 미터 눈금판 유지 — 바늘만 교체 (자동 찾기로 바늘을 찾은 경우)":"Keep the photo's own meter face — replace only the needle (when auto-find located the needle)","원본 눈금판 유지 모드에서는 분홍 점 3개가 바늘의 회전축과 눈금 왼쪽·오른쪽 끝입니다. 끌어서 맞추세요. 사진 속 옛 바늘은 자동으로 지워집니다.":"In keep-face mode the 3 pink dots are the needle pivot and the left and right ends of the scale. Drag them to fit. The photo's old needle is erased automatically.","바늘 위치":"needle positions","VU 모양":"VU style","원본 눈금판 유지 — 바늘만 교체 (자동 찾기로 바늘을 찾은 경우)":"Keep the photo's meter face — replace only the needle (when auto-find located the needle)","파란 눈금판 (검은 바늘)":"Blue meter face (black needle)","호박색 눈금판":"Amber meter face","눈금판 없음 — 바늘만 (투명)":"No face — needle only (transparent)","바늘 색":"Needle color","바늘 색 자동":"Auto needle color","VU 모양 — 원본 눈금판 유지: 사진의 눈금판을 그대로 쓰고 바늘만 움직입니다. 파란 눈금판·호박색 눈금판: 사진의 미터 창을 새 눈금판으로 덮습니다. 눈금판 없음: 바늘만 그려서 사진이 그대로 비칩니다(자동 찾기로 바늘을 찾았다면 사진 속 옛 바늘은 자동으로 지워집니다).":"VU style — Keep face: uses the photo's own meter face and moves only the needle. Blue / amber face: covers the photo's meter window with a new face. No face: draws only the needle so the photo shows through (if auto-find located the needle, the photo's old needle is erased automatically).","원본 사진 전체 표시 (화면비가 다르면 여백 추가)":"Show full photo (add padding if aspect ratios differ)","원본 눈금판 유지 — 바늘만 교체":"Keep original dial — replace needle only","사진을 올리면 자동으로 찾습니다. 영역 안을 끌어 이동하고, 모서리나 바깥 점을 끌어 크기를 맞추세요.":"Detection starts on upload. Drag inside a region to move it. Drag its corners or outer handle to resize.","정렬 보기에서 분홍 점은 회전축과 눈금 양 끝, 흰 점은 사진 속 기존 바늘 끝입니다. VU를 놓쳤다면 VU를 켜고 창과 점을 직접 맞추세요.":"In alignment view, the pink handles mark the pivot and scale ends. The white handle marks the tip of the original needle. If a VU meter was missed, enable VU and adjust the window and handles.","Noto Sans KR · 고딕":"Noto Sans KR · Sans serif","Noto Serif KR · 명조":"Noto Serif KR · Serif","고운돋움":"Gowun Dodum","고운바탕":"Gowun Batang","검은고딕":"Black Han Sans","배민 주아":"Jua","나눔손글씨 펜":"Nanum Pen Script","배민 도현":"Do Hyeon","자막 세부 설정":"Caption settings","출력 설정":"Export settings","고급 설정":"Advanced settings","배경 모드":"Background mode","자동 판별":"Auto detect","일반 사진":"Regular photo","오디오 기기":"Audio equipment","일반 사진에 부드러운 줌":"Gentle zoom on regular photos","일반 사진에 음악 스펙트럼을 추가했습니다.":"Music spectrum added to the photo.","일반 사진 움직이기":"Animate regular photos","사진 움직임":"Photo animation","사진 분석으로 자동 선택":"Choose automatically from photo","인물 입체 효과 (중앙 인물)":"Portrait parallax (centered subject)","풍경 (하늘·물·나뭇잎)":"Landscape (sky, water, foliage)","부드러운 줌만":"Gentle zoom only","사진 움직임 강도":"Photo motion strength","배경 사진 또는 동영상 선택":"Choose background photo or video","배경 동영상은 음악 길이에 맞춰 반복 재생됩니다.":"Background video loops to match the music.","동영상을 읽을 수 없습니다.":"Unable to load the video."},"ja":{"단어 하이라이트 (틱톡·쇼츠)":"単語ハイライト(TikTok/ショート)","라벨 박스 (둥근 박스)":"ラベルボックス(角丸)","타자기 (한 글자씩)":"タイプライター(1文字ずつ)","팝업 (통통 튀며 등장)":"ポップイン(弾んで登場)","음악 + 배경 이미지 → 스펙트럼과 자막이 있는 MP4":"音楽 + 背景画像 → スペクトラムと歌詞付きMP4","배경 이미지를 선택하면":"背景画像を選ぶと","여기에 미리보기가 나타납니다":"ここにプレビューが表示されます","점을 끌어 영역을 맞추세요 (노란색 = 막대, 하늘색 = VU 미터, 주황색 = 스피커). 끄는 동안 원본 사진과 확대경이 나타납니다. 안쪽을 끌면 이동, 막대는 빈 곳을 끌면 새 사각형이 만들어집니다.":"点をドラッグして領域を合わせます(黄=バー、水色=VUメーター、橙=スピーカー)。ドラッグ中は元の写真と拡大鏡が表示されます。図形の内側をドラッグで移動、空いた場所をドラッグするとバーの新しい四角形が作れます。","파일":"ファイル","음악 선택 (mp3, m4a, wav …)":"音楽を選ぶ (mp3, m4a, wav …)","선택 안 됨":"未選択","배경 이미지 선택":"背景画像を選ぶ","영상 제목 (화면과 파일 이름에 쓰입니다)":"動画タイトル(画面とファイル名に使われます)","화면과 막대":"画面とバー","영상 크기":"動画サイズ","세로 9:16 (1080×1920)":"縦 9:16 (1080×1920)","가로 16:9 (1920×1080)":"横 16:9 (1920×1080)","정사각형 1:1 (1080×1080)":"正方形 1:1 (1080×1080)","막대 색":"バーの色","Hi-fi (초록/하늘/파랑)":"Hi-fi (緑/水色/青)","Fire (노랑/빨강)":"Fire (黄/赤)","Neon (분홍/보라)":"Neon (ピンク/紫)","Ice (흰색/파랑)":"Ice (白/青)","McIntosh (하늘 → 초록 → 노랑 → 빨강)":"McIntosh (水色→緑→黄→赤)","막대 개수":"バーの数","이미지 위치":"画像の位置","원래 있던 막대를 어둡게 가리기":"元のバーを暗く隠す","킥(박자)에 화면 번쩍임":"キック(ビート)で画面を光らせる","효과 (VU 미터 · 스피커)":"エフェクト(VUメーター・スピーカー)","막대 스펙트럼 표시":"バースペクトラムを表示","VU 미터 바늘 (미터 창 두 곳을 맞추세요)":"VUメーターの針(メーター窓2か所を合わせてください)","스피커 진동 (스피커 중심과 크기를 맞추세요)":"スピーカーの振動(中心とサイズを合わせてください)","스피커 진동 세기":"スピーカー振動の強さ","VU 바늘은 사진 속 미터 창을 새 눈금판으로 덮고 그 위에서 움직입니다. 네 모서리를 각각 끌어 사진 속 미터 창의 기울기(원근)에 맞출 수 있습니다. 왼쪽 미터는 저음, 오른쪽 미터는 중·고음에 반응합니다. 스피커는 베이스(킥)가 칠 때마다 콘이 안쪽으로 울립니다.":"VUの針は、写真のメーター窓を覆う新しい文字盤の上で動きます。四隅をそれぞれドラッグして、窓の傾き(遠近)に合わせられます。左のメーターは低音、右は中高音に反応します。スピーカーはベース(キック)のたびにコーンが内側に振動します。","영역 맞추기":"領域を合わせる","정렬 보기 (원본 사진 + 격자선)":"整列表示(元の写真 + 格子線)","미세 조정 대상":"微調整の対象","막대 왼쪽 위":"バー:左上","막대 오른쪽 위":"バー:右上","막대 오른쪽 아래":"バー:右下","막대 왼쪽 아래":"バー:左下","막대 전체 이동":"バー全体を移動","VU 왼쪽 이동":"左VUを移動","VU 오른쪽 이동":"右VUを移動","스피커 이동":"スピーカーを移動","이동 단위":"移動単位","작게":"小","보통":"中","크게":"大","영역 키우기":"領域を拡大","영역 줄이기":"領域を縮小","초기화":"リセット","사진에서 자동으로 찾기 (막대 · VU · 스피커)":"写真から自動検出(バー・VU・スピーカー)","자막":"歌詞表示","자막 종류":"歌詞のスタイル","랙 패널 (제목 + 앞뒤 가사)":"ラックパネル(タイトル + 前後の歌詞)","큰 가사 한 줄 (윤곽선)":"大きな歌詞1行(縁取り)","영화 자막":"映画風字幕","네온 (빛나는 글씨)":"ネオン(光る文字)","자막 위치 (위 0% ~ 아래 100%)":"歌詞の位置(上0%〜下100%)","가사 뒤 어둡게 (0% = 사진 그대로)":"歌詞の背景を暗く(0% = 写真そのまま)","글꼴":"フォント","고딕 굵게":"ゴシック太字","좁은 고딕 굵게":"細身ゴシック太字","명조 굵게":"明朝太字","고정폭 굵게":"等幅太字","글자 색":"文字色","흰색":"白","노랑":"黄","하늘":"水色","초록":"緑","분홍":"ピンク","주황":"オレンジ","글자 크기":"文字サイズ","강조 단어 (쉼표로 구분, 포함된 줄은 초록색)":"強調する単語(カンマ区切り、含む行は緑色)","곡 제목 표시":"曲名を表示","[Chorus] 같은 구간 이름 표시":"[Chorus] などのセクション名を表示","진행 막대와 시간 표시":"進行バーと時間を表示","가사":"歌詞","가사 출처":"歌詞の取得元","자동: 음악 파일 속 가사 태그":"自動:音楽ファイル内の歌詞タグ","가사 파일 (.srt .lrc .txt)":"歌詞ファイル (.srt .lrc .txt)","가사 없음":"歌詞なし","가사 파일 선택":"歌詞ファイルを選ぶ","노래 시작(초)":"歌の開始(秒)","노래 끝(초)":"歌の終了(秒)","타이밍 없는 가사는 곡 길이에 맞춰 균등 배분됩니다. 시작·끝 초를 알면 입력하세요.":"タイミングのない歌詞は曲の長さに合わせて均等に配分されます。開始・終了秒がわかれば入力してください。","가사를 읽으면 여기에 결과가 표시됩니다.":"歌詞を読み込むと、結果がここに表示されます。","MP4 만들기":"MP4を作成","빠른 모드 (24fps, 2/3 해상도)":"高速モード(24fps、解像度2/3)","취소":"キャンセル","음악과 이미지를 선택하세요":"音楽と画像を選んでください","완성된 영상 저장":"完成した動画を保存","만드는 동안 이 탭을 열어 두세요. 최신 Chrome/Edge에서는 실시간보다 빠르게 만들고, 그렇지 않은 브라우저에서는 곡 길이만큼 걸립니다.":"作成中はこのタブを開いたままにしてください。最新のChrome/Edgeではリアルタイムより速く作成され、他のブラウザでは曲の長さ分かかります。","영상 미리보기":"動画プレビュー","재생 또는 일시정지":"再生または一時停止","재생 위치":"再生位置","왼쪽":"左","오른쪽":"右","위":"上","아래":"下","예: BOOM, PUNCH":"例: BOOM, PUNCH","비우면 처음":"空欄 = 最初","비우면 끝":"空欄 = 最後","음악 파일 속 가사":"音楽ファイル内の歌詞","타이밍 있음":"タイミングあり","타이밍 없음: 곡 길이에 맞춰 균등 배분":"タイミングなし:曲の長さに合わせて均等配分","먼저 배경 이미지를 선택하세요.":"先に背景画像を選んでください。","막대":"バー","VU 2개":"VU 2つ","스피커":"スピーカー","찾은 것: ":"見つかったもの: ",". 위치가 조금 어긋나면 점을 끌어 고치세요.":"。位置が少しずれていたら、点をドラッグして直してください。"," (못 찾은 항목은 직접 맞추세요)":"(見つからなかった項目は手動で合わせてください)","찾지 못했습니다. 직접 점을 끌어 맞추세요.":"見つかりませんでした。点をドラッグして手動で合わせてください。","이미지를 열 수 없습니다":"画像を開けません","소리 분석 중…":"音声を解析中…","준비 완료":"準備完了","배경 이미지를 선택하세요":"背景画像を選んでください","음악 읽는 중…":"音楽を読み込み中…","음악을 읽을 수 없습니다: ":"音楽を読み込めません: ","가사 파일":"歌詞ファイル","가사 파일을 선택하세요.":"歌詞ファイルを選んでください。","음악 파일 속에서 가사를 찾지 못했습니다.\n.srt / .lrc / .txt 가사 파일을 \"가사 파일\"로 선택해 주세요.":"音楽ファイル内に歌詞が見つかりませんでした。\n.srt / .lrc / .txt の歌詞ファイルを「歌詞ファイル」として選んでください。","음악을 선택하면 파일 속 가사를 찾아봅니다.":"音楽を選ぶと、ファイル内の歌詞を探します。","\n가사 줄 수: ":"\n歌詞の行数: ","영상 만드는 중… ":"動画を作成中… ","소리 인코딩 중…":"音声をエンコード中…","이 브라우저는 영상 만들기를 지원하지 않습니다. 최신 Chrome 또는 Edge를 사용하세요.":"このブラウザは動画作成に対応していません。最新のChromeまたはEdgeをお使いください。","영상 만드는 중 (실시간)… ":"動画を作成中(リアルタイム)… ","빠른 방식을 쓸 수 없어 실시간 방식으로 만듭니다…":"高速方式が使えないため、リアルタイム方式で作成します…","완료! 아래 버튼으로 저장하세요 (":"完了!下のボタンで保存してください(","취소되었습니다":"キャンセルしました","실패: ":"失敗: ","저장했습니다: ":"保存しました: ","저장을 취소했습니다. 버튼을 다시 눌러 저장할 수 있습니다.":"保存をキャンセルしました。ボタンをもう一度押すと保存できます。","저장할 수 없습니다 (":"保存できません(","저장을 시작했습니다: ":"保存を開始しました: ","스피커 추가":"スピーカーを追加","마지막 스피커 지우기":"最後のスピーカーを削除","원본 미터 눈금판 유지 — 바늘만 교체 (자동 찾기로 바늘을 찾은 경우)":"写真のメーター盤を残し、針だけ差し替える(自動検出で針が見つかった場合)","원본 눈금판 유지 모드에서는 분홍 점 3개가 바늘의 회전축과 눈금 왼쪽·오른쪽 끝입니다. 끌어서 맞추세요. 사진 속 옛 바늘은 자동으로 지워집니다.":"盤面を残すモードでは、ピンクの点3つが針の回転軸と目盛りの左右の端です。ドラッグして合わせてください。写真の元の針は自動で消されます。","바늘 위치":"針の位置","VU 모양":"VUの見た目","원본 눈금판 유지 — 바늘만 교체 (자동 찾기로 바늘을 찾은 경우)":"写真のメーター盤を残し、針だけ差し替える(自動検出で針が見つかった場合)","파란 눈금판 (검은 바늘)":"青いメーター盤(黒い針)","호박색 눈금판":"琥珀色のメーター盤","눈금판 없음 — 바늘만 (투명)":"メーター盤なし — 針のみ(透明)","바늘 색":"針の色","바늘 색 자동":"針の色を自動に","VU 모양 — 원본 눈금판 유지: 사진의 눈금판을 그대로 쓰고 바늘만 움직입니다. 파란 눈금판·호박색 눈금판: 사진의 미터 창을 새 눈금판으로 덮습니다. 눈금판 없음: 바늘만 그려서 사진이 그대로 비칩니다(자동 찾기로 바늘을 찾았다면 사진 속 옛 바늘은 자동으로 지워집니다).":"VUの見た目 — 盤面を残す:写真のメーター盤をそのまま使い、針だけ動かします。青/琥珀色の盤面:写真のメーター窓を新しい盤面で覆います。盤面なし:針だけを描き、写真がそのまま見えます(自動検出で針が見つかった場合、写真の元の針は自動で消されます)。","원본 사진 전체 표시 (화면비가 다르면 여백 추가)":"写真全体を表示（比率が異なる場合は余白を追加）","원본 눈금판 유지 — 바늘만 교체":"元の目盛りを保持 — 針のみ交換","사진을 올리면 자동으로 찾습니다. 영역 안을 끌어 이동하고, 모서리나 바깥 점을 끌어 크기를 맞추세요.":"写真を選ぶと自動検出します。枠内をドラッグして移動し、角や外側の点をドラッグしてサイズを調整します。","정렬 보기에서 분홍 점은 회전축과 눈금 양 끝, 흰 점은 사진 속 기존 바늘 끝입니다. VU를 놓쳤다면 VU를 켜고 창과 점을 직접 맞추세요.":"整列ビューでは、ピンクの点が回転軸と目盛りの両端、白い点が写真の元の針先です。検出されなかった場合はVUをオンにして調整してください。","Noto Sans KR · 고딕":"Noto Sans KR · ゴシック体","Noto Serif KR · 명조":"Noto Serif KR · 明朝体","고운돋움":"Gowun Dodum","고운바탕":"Gowun Batang","검은고딕":"Black Han Sans","배민 주아":"Jua","나눔손글씨 펜":"Nanum Pen Script","배민 도현":"Do Hyeon","자막 세부 설정":"字幕の詳細設定","출력 설정":"書き出し設定","고급 설정":"詳細設定","배경 모드":"背景モード","자동 판별":"自動判定","일반 사진":"一般写真","오디오 기기":"オーディオ機器","일반 사진에 부드러운 줌":"一般写真をゆっくりズーム","일반 사진에 음악 스펙트럼을 추가했습니다.":"写真に音楽スペクトラムを追加しました。","일반 사진 움직이기":"一般写真を動かす","사진 움직임":"写真の動き","사진 분석으로 자동 선택":"写真から自動選択","인물 입체 효과 (중앙 인물)":"人物の視差効果（中央の人物）","풍경 (하늘·물·나뭇잎)":"風景（空・水・葉）","부드러운 줌만":"ゆっくりズームのみ","사진 움직임 강도":"写真の動きの強さ","배경 사진 또는 동영상 선택":"背景の写真または動画を選択","배경 동영상은 음악 길이에 맞춰 반복 재생됩니다.":"背景動画は音楽の長さに合わせてループします。","동영상을 읽을 수 없습니다.":"動画を読み込めません。"},"zh":{"단어 하이라이트 (틱톡·쇼츠)":"单词高亮(抖音/Shorts)","라벨 박스 (둥근 박스)":"标签框(圆角)","타자기 (한 글자씩)":"打字机(逐字出现)","팝업 (통통 튀며 등장)":"弹出(弹跳出现)","음악 + 배경 이미지 → 스펙트럼과 자막이 있는 MP4":"音乐 + 背景图片 → 带频谱和歌词的MP4","배경 이미지를 선택하면":"选择背景图片后","여기에 미리보기가 나타납니다":"预览将显示在这里","점을 끌어 영역을 맞추세요 (노란색 = 막대, 하늘색 = VU 미터, 주황색 = 스피커). 끄는 동안 원본 사진과 확대경이 나타납니다. 안쪽을 끌면 이동, 막대는 빈 곳을 끌면 새 사각형이 만들어집니다.":"拖动圆点来对齐区域(黄色=频谱条,青色=VU表,橙色=扬声器)。拖动时会显示原图和放大镜。拖动形状内部可移动,在空白处拖动可新建频谱条矩形。","파일":"文件","음악 선택 (mp3, m4a, wav …)":"选择音乐 (mp3, m4a, wav …)","선택 안 됨":"未选择","배경 이미지 선택":"选择背景图片","영상 제목 (화면과 파일 이름에 쓰입니다)":"视频标题(显示在画面上并用作文件名)","화면과 막대":"画面与频谱条","영상 크기":"视频尺寸","세로 9:16 (1080×1920)":"竖屏 9:16 (1080×1920)","가로 16:9 (1920×1080)":"横屏 16:9 (1920×1080)","정사각형 1:1 (1080×1080)":"正方形 1:1 (1080×1080)","막대 색":"频谱条颜色","Hi-fi (초록/하늘/파랑)":"Hi-fi (绿/青/蓝)","Fire (노랑/빨강)":"Fire (黄/红)","Neon (분홍/보라)":"Neon (粉/紫)","Ice (흰색/파랑)":"Ice (白/蓝)","McIntosh (하늘 → 초록 → 노랑 → 빨강)":"McIntosh (青→绿→黄→红)","막대 개수":"频谱条数量","이미지 위치":"图片位置","원래 있던 막대를 어둡게 가리기":"遮暗照片中原有的频谱条","킥(박자)에 화면 번쩍임":"底鼓(节拍)时画面闪烁","효과 (VU 미터 · 스피커)":"特效(VU表 · 扬声器)","막대 스펙트럼 표시":"显示频谱条","VU 미터 바늘 (미터 창 두 곳을 맞추세요)":"VU表指针(请对齐两个表窗)","스피커 진동 (스피커 중심과 크기를 맞추세요)":"扬声器震动(请设定扬声器中心和大小)","스피커 진동 세기":"扬声器震动强度","VU 바늘은 사진 속 미터 창을 새 눈금판으로 덮고 그 위에서 움직입니다. 네 모서리를 각각 끌어 사진 속 미터 창의 기울기(원근)에 맞출 수 있습니다. 왼쪽 미터는 저음, 오른쪽 미터는 중·고음에 반응합니다. 스피커는 베이스(킥)가 칠 때마다 콘이 안쪽으로 울립니다.":"VU指针会在覆盖照片表窗的新表盘上摆动。可分别拖动四个角,匹配表窗的倾斜(透视)。左表对低音反应,右表对中高音反应。每次低音(底鼓)时,扬声器锥盆会向内震动。","영역 맞추기":"对齐区域","정렬 보기 (원본 사진 + 격자선)":"对齐视图(原图 + 网格线)","미세 조정 대상":"微调对象","막대 왼쪽 위":"频谱条:左上","막대 오른쪽 위":"频谱条:右上","막대 오른쪽 아래":"频谱条:右下","막대 왼쪽 아래":"频谱条:左下","막대 전체 이동":"整体移动频谱条","VU 왼쪽 이동":"移动左VU表","VU 오른쪽 이동":"移动右VU表","스피커 이동":"移动扬声器","이동 단위":"移动步长","작게":"小","보통":"中","크게":"大","영역 키우기":"放大区域","영역 줄이기":"缩小区域","초기화":"重置","사진에서 자동으로 찾기 (막대 · VU · 스피커)":"从照片自动识别(频谱条 · VU表 · 扬声器)","자막":"歌词样式","자막 종류":"歌词样式","랙 패널 (제목 + 앞뒤 가사)":"机架面板(标题 + 前后歌词)","큰 가사 한 줄 (윤곽선)":"大号单行歌词(描边)","영화 자막":"电影字幕","네온 (빛나는 글씨)":"霓虹(发光文字)","자막 위치 (위 0% ~ 아래 100%)":"歌词位置(顶部0% ~ 底部100%)","가사 뒤 어둡게 (0% = 사진 그대로)":"歌词背景变暗(0% = 保持原图)","글꼴":"字体","고딕 굵게":"黑体加粗","좁은 고딕 굵게":"窄黑体加粗","명조 굵게":"宋体加粗","고정폭 굵게":"等宽加粗","글자 색":"文字颜色","흰색":"白色","노랑":"黄色","하늘":"青色","초록":"绿色","분홍":"粉色","주황":"橙色","글자 크기":"文字大小","강조 단어 (쉼표로 구분, 포함된 줄은 초록색)":"强调词(逗号分隔,包含的行显示为绿色)","곡 제목 표시":"显示歌曲标题","[Chorus] 같은 구간 이름 표시":"显示 [Chorus] 等段落名称","진행 막대와 시간 표시":"显示进度条和时间","가사":"歌词","가사 출처":"歌词来源","자동: 음악 파일 속 가사 태그":"自动:音乐文件内的歌词标签","가사 파일 (.srt .lrc .txt)":"歌词文件 (.srt .lrc .txt)","가사 없음":"无歌词","가사 파일 선택":"选择歌词文件","노래 시작(초)":"歌曲开始(秒)","노래 끝(초)":"歌曲结束(秒)","타이밍 없는 가사는 곡 길이에 맞춰 균등 배분됩니다. 시작·끝 초를 알면 입력하세요.":"没有时间轴的歌词会按歌曲时长平均分配。如果知道开始和结束秒数,请填写。","가사를 읽으면 여기에 결과가 표시됩니다.":"读取歌词后,结果会显示在这里。","MP4 만들기":"生成MP4","빠른 모드 (24fps, 2/3 해상도)":"快速模式(24fps,2/3分辨率)","취소":"取消","음악과 이미지를 선택하세요":"请选择音乐和图片","완성된 영상 저장":"保存完成的视频","만드는 동안 이 탭을 열어 두세요. 최신 Chrome/Edge에서는 실시간보다 빠르게 만들고, 그렇지 않은 브라우저에서는 곡 길이만큼 걸립니다.":"生成期间请保持此标签页打开。最新版Chrome/Edge生成速度快于实时,其他浏览器则需要与歌曲时长相同的时间。","영상 미리보기":"视频预览","재생 또는 일시정지":"播放或暂停","재생 위치":"播放位置","왼쪽":"左","오른쪽":"右","위":"上","아래":"下","예: BOOM, PUNCH":"例如: BOOM, PUNCH","비우면 처음":"留空 = 从头","비우면 끝":"留空 = 到结尾","음악 파일 속 가사":"音乐文件内的歌词","타이밍 있음":"有时间轴","타이밍 없음: 곡 길이에 맞춰 균등 배분":"无时间轴:按歌曲时长平均分配","먼저 배경 이미지를 선택하세요.":"请先选择背景图片。","막대":"频谱条","VU 2개":"2个VU表","스피커":"扬声器","찾은 것: ":"已找到:",". 위치가 조금 어긋나면 점을 끌어 고치세요.":"。如果位置略有偏差,请拖动圆点修正。"," (못 찾은 항목은 직접 맞추세요)":"(未找到的项目请手动对齐)","찾지 못했습니다. 직접 점을 끌어 맞추세요.":"未找到。请手动拖动圆点对齐。","이미지를 열 수 없습니다":"无法打开图片","소리 분석 중…":"正在分析音频…","준비 완료":"准备就绪","배경 이미지를 선택하세요":"请选择背景图片","음악 읽는 중…":"正在读取音乐…","음악을 읽을 수 없습니다: ":"无法读取音乐:","가사 파일":"歌词文件","가사 파일을 선택하세요.":"请选择歌词文件。","음악 파일 속에서 가사를 찾지 못했습니다.\n.srt / .lrc / .txt 가사 파일을 \"가사 파일\"로 선택해 주세요.":"在音乐文件中未找到歌词。\n请选择 .srt / .lrc / .txt 歌词文件作为“歌词文件”。","음악을 선택하면 파일 속 가사를 찾아봅니다.":"选择音乐后会查找文件内的歌词。","\n가사 줄 수: ":"\n歌词行数:","영상 만드는 중… ":"正在生成视频… ","소리 인코딩 중…":"正在编码音频…","이 브라우저는 영상 만들기를 지원하지 않습니다. 최신 Chrome 또는 Edge를 사용하세요.":"此浏览器不支持生成视频。请使用最新版Chrome或Edge。","영상 만드는 중 (실시간)… ":"正在生成视频(实时)… ","빠른 방식을 쓸 수 없어 실시간 방식으로 만듭니다…":"无法使用快速方式,改用实时方式生成…","완료! 아래 버튼으로 저장하세요 (":"完成!请用下方按钮保存(","취소되었습니다":"已取消","실패: ":"失败:","저장했습니다: ":"已保存:","저장을 취소했습니다. 버튼을 다시 눌러 저장할 수 있습니다.":"已取消保存。再次点击按钮即可保存。","저장할 수 없습니다 (":"无法保存(","저장을 시작했습니다: ":"已开始保存:","스피커 추가":"添加扬声器","마지막 스피커 지우기":"删除最后一个扬声器","원본 미터 눈금판 유지 — 바늘만 교체 (자동 찾기로 바늘을 찾은 경우)":"保留照片中的表盘,只替换指针(自动查找到指针时)","원본 눈금판 유지 모드에서는 분홍 점 3개가 바늘의 회전축과 눈금 왼쪽·오른쪽 끝입니다. 끌어서 맞추세요. 사진 속 옛 바늘은 자동으로 지워집니다.":"保留表盘模式下,3个粉色点分别是指针转轴和刻度的左右两端。拖动即可对齐。照片中原来的指针会被自动抹除。","바늘 위치":"指针位置","VU 모양":"VU样式","원본 눈금판 유지 — 바늘만 교체 (자동 찾기로 바늘을 찾은 경우)":"保留照片中的表盘,只替换指针(自动查找到指针时)","파란 눈금판 (검은 바늘)":"蓝色表盘(黑色指针)","호박색 눈금판":"琥珀色表盘","눈금판 없음 — 바늘만 (투명)":"无表盘 — 仅指针(透明)","바늘 색":"指针颜色","바늘 색 자동":"指针颜色自动","VU 모양 — 원본 눈금판 유지: 사진의 눈금판을 그대로 쓰고 바늘만 움직입니다. 파란 눈금판·호박색 눈금판: 사진의 미터 창을 새 눈금판으로 덮습니다. 눈금판 없음: 바늘만 그려서 사진이 그대로 비칩니다(자동 찾기로 바늘을 찾았다면 사진 속 옛 바늘은 자동으로 지워집니다).":"VU样式 — 保留表盘:沿用照片中的表盘,只移动指针。蓝色/琥珀色表盘:用新表盘覆盖照片中的表窗。无表盘:只画指针,照片原样透出(若自动查找到指针,照片中原来的指针会被自动抹除)。","원본 사진 전체 표시 (화면비가 다르면 여백 추가)":"显示完整照片（宽高比不同时留边）","원본 눈금판 유지 — 바늘만 교체":"保留原刻度盘，只替换指针","사진을 올리면 자동으로 찾습니다. 영역 안을 끌어 이동하고, 모서리나 바깥 점을 끌어 크기를 맞추세요.":"上传照片后自动识别。拖动区域内部可移动，拖动角点或外侧控制点可调整大小。","정렬 보기에서 분홍 점은 회전축과 눈금 양 끝, 흰 점은 사진 속 기존 바늘 끝입니다. VU를 놓쳤다면 VU를 켜고 창과 점을 직접 맞추세요.":"在对齐视图中，粉色点代表转轴和刻度两端，白色点代表照片中原有的指针尖端。若未识别到 VU 表，请启用 VU 后手动调整。","Noto Sans KR · 고딕":"Noto Sans KR · 黑体","Noto Serif KR · 명조":"Noto Serif KR · 明朝体","고운돋움":"Gowun Dodum","고운바탕":"Gowun Batang","검은고딕":"Black Han Sans","배민 주아":"Jua","나눔손글씨 펜":"Nanum Pen Script","배민 도현":"Do Hyeon","자막 세부 설정":"字幕详细设置","출력 설정":"导出设置","고급 설정":"高级设置","배경 모드":"背景模式","자동 판별":"自动判断","일반 사진":"普通照片","오디오 기기":"音响设备","일반 사진에 부드러운 줌":"普通照片缓慢缩放","일반 사진에 음악 스펙트럼을 추가했습니다.":"已为照片添加音乐频谱。","일반 사진 움직이기":"让普通照片动起来","사진 움직임":"照片动画","사진 분석으로 자동 선택":"根据照片自动选择","인물 입체 효과 (중앙 인물)":"人像视差（居中主体）","풍경 (하늘·물·나뭇잎)":"风景（天空、水面、树叶）","부드러운 줌만":"仅缓慢缩放","사진 움직임 강도":"照片动画强度","배경 사진 또는 동영상 선택":"选择背景照片或视频","배경 동영상은 음악 길이에 맞춰 반복 재생됩니다.":"背景视频将循环以匹配音乐时长。","동영상을 읽을 수 없습니다.":"无法读取视频。"},"es":{"단어 하이라이트 (틱톡·쇼츠)":"Palabra resaltada (TikTok/Shorts)","라벨 박스 (둥근 박스)":"Caja de etiqueta (redondeada)","타자기 (한 글자씩)":"Máquina de escribir (letra a letra)","팝업 (통통 튀며 등장)":"Pop-in (con rebote)","음악 + 배경 이미지 → 스펙트럼과 자막이 있는 MP4":"Música + imagen de fondo → MP4 con espectro y letras","배경 이미지를 선택하면":"Al elegir una imagen de fondo","여기에 미리보기가 나타납니다":"la vista previa aparecerá aquí","점을 끌어 영역을 맞추세요 (노란색 = 막대, 하늘색 = VU 미터, 주황색 = 스피커). 끄는 동안 원본 사진과 확대경이 나타납니다. 안쪽을 끌면 이동, 막대는 빈 곳을 끌면 새 사각형이 만들어집니다.":"Arrastra los puntos para ajustar cada zona (amarillo = barras, cian = vúmetros, naranja = altavoz). Mientras arrastras se muestran la foto original y una lupa. Arrastra dentro de una forma para moverla; en un espacio vacío se dibuja un nuevo rectángulo de barras.","파일":"Archivos","음악 선택 (mp3, m4a, wav …)":"Elegir música (mp3, m4a, wav …)","선택 안 됨":"Nada seleccionado","배경 이미지 선택":"Elegir imagen de fondo","영상 제목 (화면과 파일 이름에 쓰입니다)":"Título del vídeo (se muestra en pantalla y se usa como nombre de archivo)","화면과 막대":"Pantalla y barras","영상 크기":"Tamaño del vídeo","세로 9:16 (1080×1920)":"Vertical 9:16 (1080×1920)","가로 16:9 (1920×1080)":"Horizontal 16:9 (1920×1080)","정사각형 1:1 (1080×1080)":"Cuadrado 1:1 (1080×1080)","막대 색":"Color de las barras","Hi-fi (초록/하늘/파랑)":"Hi-fi (verde/cian/azul)","Fire (노랑/빨강)":"Fire (amarillo/rojo)","Neon (분홍/보라)":"Neon (rosa/morado)","Ice (흰색/파랑)":"Ice (blanco/azul)","McIntosh (하늘 → 초록 → 노랑 → 빨강)":"McIntosh (cian → verde → amarillo → rojo)","막대 개수":"Número de barras","이미지 위치":"Posición de la imagen","원래 있던 막대를 어둡게 가리기":"Oscurecer las barras originales de la foto","킥(박자)에 화면 번쩍임":"Destello de pantalla con el bombo (ritmo)","효과 (VU 미터 · 스피커)":"Efectos (vúmetros · altavoz)","막대 스펙트럼 표시":"Mostrar barras de espectro","VU 미터 바늘 (미터 창 두 곳을 맞추세요)":"Agujas de vúmetro (ajusta las dos ventanas)","스피커 진동 (스피커 중심과 크기를 맞추세요)":"Pulso del altavoz (ajusta centro y tamaño)","스피커 진동 세기":"Intensidad del pulso del altavoz","VU 바늘은 사진 속 미터 창을 새 눈금판으로 덮고 그 위에서 움직입니다. 네 모서리를 각각 끌어 사진 속 미터 창의 기울기(원근)에 맞출 수 있습니다. 왼쪽 미터는 저음, 오른쪽 미터는 중·고음에 반응합니다. 스피커는 베이스(킥)가 칠 때마다 콘이 안쪽으로 울립니다.":"Las agujas se mueven sobre una nueva esfera que cubre la ventana del vúmetro de la foto. Arrastra cada esquina para igualar la inclinación (perspectiva). El vúmetro izquierdo reacciona a los graves y el derecho a medios y agudos. El cono del altavoz se hunde con cada golpe de bombo.","영역 맞추기":"Ajustar zonas","정렬 보기 (원본 사진 + 격자선)":"Vista de alineación (foto original + cuadrícula)","미세 조정 대상":"Objeto de ajuste fino","막대 왼쪽 위":"Barras: arriba izq.","막대 오른쪽 위":"Barras: arriba der.","막대 오른쪽 아래":"Barras: abajo der.","막대 왼쪽 아래":"Barras: abajo izq.","막대 전체 이동":"Mover todas las barras","VU 왼쪽 이동":"Mover VU izquierdo","VU 오른쪽 이동":"Mover VU derecho","스피커 이동":"Mover altavoz","이동 단위":"Tamaño del paso","작게":"Pequeño","보통":"Medio","크게":"Grande","영역 키우기":"Agrandar zona","영역 줄이기":"Reducir zona","초기화":"Restablecer","사진에서 자동으로 찾기 (막대 · VU · 스피커)":"Detectar automáticamente en la foto (barras · VU · altavoz)","자막":"Letras","자막 종류":"Estilo de letras","랙 패널 (제목 + 앞뒤 가사)":"Panel de rack (título + líneas anterior/siguiente)","큰 가사 한 줄 (윤곽선)":"Línea grande única (con contorno)","영화 자막":"Subtítulo de cine","네온 (빛나는 글씨)":"Neón (texto brillante)","자막 위치 (위 0% ~ 아래 100%)":"Posición de la letra (arriba 0% – abajo 100%)","가사 뒤 어둡게 (0% = 사진 그대로)":"Oscurecer tras la letra (0% = foto tal cual)","글꼴":"Fuente","고딕 굵게":"Sans negrita","좁은 고딕 굵게":"Sans condensada negrita","명조 굵게":"Serif negrita","고정폭 굵게":"Monoespaciada negrita","글자 색":"Color del texto","흰색":"Blanco","노랑":"Amarillo","하늘":"Cian","초록":"Verde","분홍":"Rosa","주황":"Naranja","글자 크기":"Tamaño del texto","강조 단어 (쉼표로 구분, 포함된 줄은 초록색)":"Palabras destacadas (separadas por comas; las líneas que las contienen se ponen verdes)","곡 제목 표시":"Mostrar título de la canción","[Chorus] 같은 구간 이름 표시":"Mostrar nombres de sección como [Chorus]","진행 막대와 시간 표시":"Mostrar barra de progreso y tiempo","가사":"Letra","가사 출처":"Origen de la letra","자동: 음악 파일 속 가사 태그":"Auto: etiqueta de letra dentro del archivo de música","가사 파일 (.srt .lrc .txt)":"Archivo de letra (.srt .lrc .txt)","가사 없음":"Sin letra","가사 파일 선택":"Elegir archivo de letra","노래 시작(초)":"Inicio de la canción (s)","노래 끝(초)":"Fin de la canción (s)","타이밍 없는 가사는 곡 길이에 맞춰 균등 배분됩니다. 시작·끝 초를 알면 입력하세요.":"La letra sin tiempos se reparte uniformemente según la duración. Si conoces los segundos de inicio y fin, introdúcelos.","가사를 읽으면 여기에 결과가 표시됩니다.":"Aquí aparecerá el resultado al leer la letra.","MP4 만들기":"Crear MP4","빠른 모드 (24fps, 2/3 해상도)":"Modo rápido (24 fps, 2/3 de resolución)","취소":"Cancelar","음악과 이미지를 선택하세요":"Elige música e imagen","완성된 영상 저장":"Guardar el vídeo terminado","만드는 동안 이 탭을 열어 두세요. 최신 Chrome/Edge에서는 실시간보다 빠르게 만들고, 그렇지 않은 브라우저에서는 곡 길이만큼 걸립니다.":"Mantén esta pestaña abierta mientras se genera. Chrome/Edge recientes van más rápido que el tiempo real; otros navegadores tardan lo que dura la canción.","영상 미리보기":"Vista previa del vídeo","재생 또는 일시정지":"Reproducir o pausar","재생 위치":"Posición de reproducción","왼쪽":"Izquierda","오른쪽":"Derecha","위":"Arriba","아래":"Abajo","예: BOOM, PUNCH":"p. ej.: BOOM, PUNCH","비우면 처음":"Vacío = inicio","비우면 끝":"Vacío = final","음악 파일 속 가사":"Letra dentro del archivo de música","타이밍 있음":"con tiempos","타이밍 없음: 곡 길이에 맞춰 균등 배분":"sin tiempos: repartida uniformemente","먼저 배경 이미지를 선택하세요.":"Primero elige una imagen de fondo.","막대":"barras","VU 2개":"2 vúmetros","스피커":"altavoz","찾은 것: ":"Encontrado: ",". 위치가 조금 어긋나면 점을 끌어 고치세요.":". Si alguna posición no es exacta, arrastra los puntos para corregirla."," (못 찾은 항목은 직접 맞추세요)":" (ajusta a mano lo que no se encontró)","찾지 못했습니다. 직접 점을 끌어 맞추세요.":"No se encontró nada. Arrastra los puntos manualmente.","이미지를 열 수 없습니다":"No se puede abrir la imagen","소리 분석 중…":"Analizando audio…","준비 완료":"Listo","배경 이미지를 선택하세요":"Elige una imagen de fondo","음악 읽는 중…":"Leyendo música…","음악을 읽을 수 없습니다: ":"No se puede leer la música: ","가사 파일":"Archivo de letra","가사 파일을 선택하세요.":"Elige un archivo de letra.","음악 파일 속에서 가사를 찾지 못했습니다.\n.srt / .lrc / .txt 가사 파일을 \"가사 파일\"로 선택해 주세요.":"No se encontró letra dentro del archivo de música.\nElige un archivo .srt / .lrc / .txt como \"Archivo de letra\".","음악을 선택하면 파일 속 가사를 찾아봅니다.":"Al elegir música se buscará la letra dentro del archivo.","\n가사 줄 수: ":"\nLíneas de letra: ","영상 만드는 중… ":"Generando vídeo… ","소리 인코딩 중…":"Codificando audio…","이 브라우저는 영상 만들기를 지원하지 않습니다. 최신 Chrome 또는 Edge를 사용하세요.":"Este navegador no puede crear vídeos. Usa la última versión de Chrome o Edge.","영상 만드는 중 (실시간)… ":"Generando vídeo (tiempo real)… ","빠른 방식을 쓸 수 없어 실시간 방식으로 만듭니다…":"Método rápido no disponible; se genera en tiempo real…","완료! 아래 버튼으로 저장하세요 (":"¡Listo! Guárdalo con el botón de abajo (","취소되었습니다":"Cancelado","실패: ":"Error: ","저장했습니다: ":"Guardado: ","저장을 취소했습니다. 버튼을 다시 눌러 저장할 수 있습니다.":"Guardado cancelado. Vuelve a pulsar el botón para guardar.","저장할 수 없습니다 (":"No se puede guardar (","저장을 시작했습니다: ":"Descarga iniciada: ","스피커 추가":"Añadir altavoz","마지막 스피커 지우기":"Quitar el último altavoz","원본 미터 눈금판 유지 — 바늘만 교체 (자동 찾기로 바늘을 찾은 경우)":"Conservar la esfera de la foto y cambiar solo la aguja (si la búsqueda automática la encontró)","원본 눈금판 유지 모드에서는 분홍 점 3개가 바늘의 회전축과 눈금 왼쪽·오른쪽 끝입니다. 끌어서 맞추세요. 사진 속 옛 바늘은 자동으로 지워집니다.":"En este modo, los 3 puntos rosas son el eje de la aguja y los extremos izquierdo y derecho de la escala. Arrástralos para ajustar. La aguja original de la foto se borra sola.","바늘 위치":"posición de agujas","VU 모양":"Estilo del VU","원본 눈금판 유지 — 바늘만 교체 (자동 찾기로 바늘을 찾은 경우)":"Conservar la esfera de la foto y cambiar solo la aguja (si la búsqueda automática la encontró)","파란 눈금판 (검은 바늘)":"Esfera azul (aguja negra)","호박색 눈금판":"Esfera ámbar","눈금판 없음 — 바늘만 (투명)":"Sin esfera — solo la aguja (transparente)","바늘 색":"Color de la aguja","바늘 색 자동":"Color de aguja automático","VU 모양 — 원본 눈금판 유지: 사진의 눈금판을 그대로 쓰고 바늘만 움직입니다. 파란 눈금판·호박색 눈금판: 사진의 미터 창을 새 눈금판으로 덮습니다. 눈금판 없음: 바늘만 그려서 사진이 그대로 비칩니다(자동 찾기로 바늘을 찾았다면 사진 속 옛 바늘은 자동으로 지워집니다).":"Estilo del VU — Conservar esfera: usa la esfera de la foto y mueve solo la aguja. Esfera azul/ámbar: tapa la ventana del vúmetro de la foto con una esfera nueva. Sin esfera: dibuja solo la aguja y la foto se ve a través (si la búsqueda automática encontró la aguja, la aguja original de la foto se borra sola).","원본 사진 전체 표시 (화면비가 다르면 여백 추가)":"Mostrar la foto completa (añadir márgenes si cambia la proporción)","원본 눈금판 유지 — 바늘만 교체":"Conservar la escala original y sustituir solo la aguja","사진을 올리면 자동으로 찾습니다. 영역 안을 끌어 이동하고, 모서리나 바깥 점을 끌어 크기를 맞추세요.":"La detección comienza al cargar la foto. Arrastra el interior de un área para moverla y sus esquinas o tirador exterior para cambiar su tamaño.","정렬 보기에서 분홍 점은 회전축과 눈금 양 끝, 흰 점은 사진 속 기존 바늘 끝입니다. VU를 놓쳤다면 VU를 켜고 창과 점을 직접 맞추세요.":"En la vista de alineación, los puntos rosas indican el eje y los extremos de la escala. El punto blanco corresponde a la punta de la aguja original. Si no se detecta un medidor VU, actívalo y ajusta el área y sus puntos.","Noto Sans KR · 고딕":"Noto Sans KR · Sin serifa","Noto Serif KR · 명조":"Noto Serif KR · Con serifa","고운돋움":"Gowun Dodum","고운바탕":"Gowun Batang","검은고딕":"Black Han Sans","배민 주아":"Jua","나눔손글씨 펜":"Nanum Pen Script","배민 도현":"Do Hyeon","자막 세부 설정":"Ajustes de subtítulos","출력 설정":"Ajustes de exportación","고급 설정":"Ajustes avanzados","배경 모드":"Modo de fondo","자동 판별":"Detectar automáticamente","일반 사진":"Foto normal","오디오 기기":"Equipo de audio","일반 사진에 부드러운 줌":"Zoom suave en fotos normales","일반 사진에 음악 스펙트럼을 추가했습니다.":"Se añadió el espectro musical a la foto.","일반 사진 움직이기":"Animar fotos normales","사진 움직임":"Animación de foto","사진 분석으로 자동 선택":"Elegir automáticamente","인물 입체 효과 (중앙 인물)":"Paralaje de retrato (sujeto centrado)","풍경 (하늘·물·나뭇잎)":"Paisaje (cielo, agua y follaje)","부드러운 줌만":"Solo zoom suave","사진 움직임 강도":"Intensidad del movimiento","배경 사진 또는 동영상 선택":"Elegir foto o vídeo de fondo","배경 동영상은 음악 길이에 맞춰 반복 재생됩니다.":"El vídeo de fondo se repite hasta que termina la música.","동영상을 읽을 수 없습니다.":"No se pudo cargar el vídeo."}};
 let LANG='ko';
 const t=s=>{const d=I18N[LANG];return(d&&d[s])||s;};
 const i18nOrig=new WeakMap(),i18nAttr=new WeakMap();
@@ -256,12 +275,20 @@ const FONTS=[
   {w:'800',f:'"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif'},
   {w:'700',f:'"Barlow Condensed","Arial Narrow","Malgun Gothic","Apple SD Gothic Neo",sans-serif'},
   {w:'700',f:'"Batang","AppleMyungjo","Noto Serif KR",serif'},
-  {w:'700',f:'"Share Tech Mono",Consolas,"Courier New",monospace'}];
+  {w:'700',f:'"Share Tech Mono",Consolas,"Courier New",monospace'},
+  {w:'700',web:'Noto Sans KR',f:'"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif'},
+  {w:'700',web:'Noto Serif KR',f:'"Noto Serif KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif'},
+  {w:'400',web:'Gowun Dodum',f:'"Gowun Dodum","Malgun Gothic","Apple SD Gothic Neo",sans-serif'},
+  {w:'700',web:'Gowun Batang',f:'"Gowun Batang","Malgun Gothic","Apple SD Gothic Neo",sans-serif'},
+  {w:'400',web:'Black Han Sans',f:'"Black Han Sans","Malgun Gothic","Apple SD Gothic Neo",sans-serif'},
+  {w:'400',web:'Jua',f:'"Jua","Malgun Gothic","Apple SD Gothic Neo",sans-serif'},
+  {w:'400',web:'Nanum Pen Script',f:'"Nanum Pen Script","Malgun Gothic","Apple SD Gothic Neo",sans-serif'},
+  {w:'400',web:'Do Hyeon',f:'"Do Hyeon","Malgun Gothic","Apple SD Gothic Neo",sans-serif'}];
 const hasCjk=s=>/[̀-￿]/.test(s);
 const SEGS=18,FW=1000,FH=600;
 
 const O={size:'portrait',quad:null,bars:8,palette:0,style:'rack',font:0,scale:1,color:'#e6e4dc',hot:'',
-  pos:0,title:true,section:true,progress:true,erase:true,flash:true,fast:true,offset:.5,guide:false,showBars:true,vu:false,spk:false,spkAmt:.8,fx:null,shade:.5};
+  pos:0,title:true,section:true,progress:true,erase:true,flash:false,fast:true,offset:.5,guide:false,showBars:false,vu:false,photoFit:true,background:'auto',general:false,motion:true,photoMotion:'auto',motionPower:.4,vuReal:true,vuStyle:'real',vuCol:null,spk:false,spkAmt:.8,fx:null,shade:.5};
 
 function defaultQuad(key){
   const [w,h]=SIZES[key];let l,t,r,b;
@@ -269,6 +296,11 @@ function defaultQuad(key){
   else if(key==='square'){l=.10*w;t=.55*h;r=.90*w;b=.90*h;}
   else{l=.20*w;t=.10*h;r=.80*w;b=.45*h;}
   return [[l,t],[r,t],[r,b],[l,b]];
+}
+function photoSpectrumQuad(key){
+  const [w,h]=SIZES[key];
+  const top=key==='landscape'?.08:.78;
+  return [[.15*w,top*h],[.85*w,top*h],[.85*w,(top+.14)*h],[.15*w,(top+.14)*h]];
 }
 function defaultPos(style,key){
   if(['word','label','type','pop'].includes(style))return .8;
@@ -283,24 +315,6 @@ function defaultFx(key){
   if(key==='portrait')return {vl:Q([[.02,.20],[.365,.165],[.365,.285],[.015,.355]]),vr:Q([[.585,.12],[1,.062],[1,.17],[.585,.225]]),sp:[.51*w,.85*h,.42*w]};
   const m=Math.min(w,h);
   return {vl:Q([[.05,.06],[.35,.06],[.35,.28],[.05,.28]]),vr:Q([[.65,.06],[.95,.06],[.95,.28],[.65,.28]]),sp:[.5*w,.68*h,.28*m]};
-}
-function fxTracks(lvl,kick,bands,nf){
-  const vl=new Float32Array(nf),vr=new Float32Array(nf),sp=new Float32Array(nf);
-  let pl=0,ll=0,pr=0,lr=0,ps=0,ls=0;
-  const half=Math.max(1,bands>>1);
-  for(let f=0;f<nf;f++){
-    const l=lvl[f];let lo=0,hi=0;
-    for(let i=0;i<bands;i++){if(i<half)lo+=l[i];else hi+=l[i];}
-    lo/=half;hi/=Math.max(1,bands-half);
-    const tl=clamp(lo*1.35,0,1),tr=clamp(hi*1.6,0,1);
-    ll=ll*.62+(tl-pl)*.30;pl=clamp(pl+ll,0,1.08);
-    lr=lr*.62+(tr-pr)*.30;pr=clamp(pr+lr,0,1.08);
-    const bass=(l[0]+(bands>1?l[1]:l[0]))/2;
-    const ts=clamp(.55*bass+.75*kick[f],0,1);
-    ls=ls*.5+(ts-ps)*.5;ps=clamp(ps+ls,0,1);
-    vl[f]=pl;vr[f]=pr;sp[f]=ps;
-  }
-  return {vl,vr,sp};
 }
 function paletteColors(idx,n){
   const st=PALETTES[clamp(idx,0,PALETTES.length-1)];const out=[];
@@ -320,17 +334,76 @@ function homo(q){
     a=x1-x0+g*x1;b=x3-x0+h*x3;c=x0;d=y1-y0+g*y1;e=y3-y0+h*y3;f=y0;}
   return (u,v)=>{const w=g*u+h*v+1;return [(a*u+b*v+c)/w,(d*u+e*v+f)/w];};
 }
-function coverDraw(g,img,W,H,off){
-  const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
-  const s=Math.max(W/iw,H/ih),dw=iw*s,dh=ih*s;
-  g.drawImage(img,-(dw-W)*off,-(dh-H)*off,dw,dh);
+function photoPlacement(img,W,H,off,fit){
+  const iw=img.videoWidth||img.naturalWidth||img.width,ih=img.videoHeight||img.naturalHeight||img.height;
+  const scale=(fit?Math.min:Math.max)(W/iw,H/ih);
+  return {scale,x:(W-iw*scale)*off,y:(H-ih*scale)*off};
+}
+function coverDraw(g,img,W,H,off,fit){
+  const p=photoPlacement(img,W,H,off,fit);
+  g.drawImage(img,p.x,p.y,(img.videoWidth||img.naturalWidth||img.width)*p.scale,(img.videoHeight||img.naturalHeight||img.height)*p.scale);
 }
 function rr(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
 
 /* ---------------------------------------------------------------- scene */
-function makeScene(o,W,H,img,lines,marks,title,dur){
+const photoLayers=new WeakMap();
+function analyzePhoto(img){
+  if(photoLayers.has(img))return photoLayers.get(img);
+  const width=img.videoWidth||img.naturalWidth||img.width,height=img.videoHeight||img.naturalHeight||img.height;
+  const scale=Math.min(1,320/Math.max(width,height)),w=Math.max(2,Math.round(width*scale)),h=Math.max(2,Math.round(height*scale));
+  const c=document.createElement('canvas');c.width=w;c.height=h;
+  const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0,w,h);
+  const rgb=g.getImageData(0,0,w,h).data;
+  const masks=['sky','water','leaves'].map(kind=>{
+    const mask=document.createElement('canvas');mask.width=w;mask.height=h;
+    const ctx=mask.getContext('2d'),pixels=ctx.createImageData(w,h),p=pixels.data;
+    let count=0;
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      const i=(y*w+x)*4,r=rgb[i],green=rgb[i+1],b=rgb[i+2],u=y/h;
+      const blue=clamp((Math.min(b,green)-r-12)/38,0,1);
+      const softCloud=clamp((Math.min(r,green,b)-153)/65,0,1)*clamp((34-(Math.max(r,green,b)-Math.min(r,green,b)))/26,0,1);
+      const leafy=clamp((green-Math.max(r*.9,b)-9)/26,0,1)*clamp((green-30)/34,0,1);
+      const a=kind==='sky'?Math.max(blue,softCloud*.83)*clamp((.55-u)/.23,0,1):
+        kind==='water'?blue*clamp((u-.43)/.2,0,1):leafy;
+      p[i+3]=Math.round(255*a);count+=a;
+    }
+    if(count<w*h*.016)return null;
+    ctx.putImageData(pixels,0,0);
+    return {kind,mask};
+  }).filter(Boolean);
+  photoLayers.set(img,masks);
+  return masks;
+}
+
+function preparePhotoMotion(img,W,H,o,photo){
+  if(!o.general||!o.motion)return null;
+  const placement=photoPlacement(img,W,H,o.offset,o.photoFit);
+  const iw=img.videoWidth||img.naturalWidth||img.width,ih=img.videoHeight||img.naturalHeight||img.height;
+  const viewport=[placement.x,placement.y,iw*placement.scale,ih*placement.scale];
+  const mode=o.photoMotion;
+  const layers=mode==='portrait'||mode==='zoom'?[]:analyzePhoto(img).slice();
+  const portrait=mode==='portrait'||(mode==='auto'&&!layers.length&&ih>iw*1.13);
+  if(portrait){
+    const mask=document.createElement('canvas');mask.width=256;mask.height=256;
+    const g=mask.getContext('2d');
+    g.translate(128,140);g.scale(1,1.36);
+    const gradient=g.createRadialGradient(0,0,33,0,0,105);
+    gradient.addColorStop(0,'#000');gradient.addColorStop(.55,'rgba(0,0,0,.95)');gradient.addColorStop(1,'transparent');
+    g.fillStyle=gradient;g.fillRect(-128,-110,256,220);
+    layers.push({kind:'portrait',mask});
+  }
+  return layers.map(({kind,mask})=>{
+    const c=document.createElement('canvas');c.width=W;c.height=H;
+    const g=c.getContext('2d');g.drawImage(photo,0,0);
+    g.globalCompositeOperation='destination-in';
+    if(kind!=='portrait')g.filter='blur('+Math.max(1,Math.min(W,H)*.004)+'px)';
+    g.drawImage(mask,...viewport);
+    return {kind,canvas:c};
+  });
+}
+function makeScene(o,W,H,img,lines,marks,title,dur,video=null){
   const [lw,lh]=SIZES[o.size];const sx=W/lw,sy=H/lh;
-  const quad=o.quad||defaultQuad(o.size);const map=homo(quad);
+  const quad=o.quad||(o.general?photoSpectrumQuad(o.size):defaultQuad(o.size));const map=homo(quad);
   const cols=paletteColors(o.palette,o.bars);
   const font=FONTS[o.font];
   const hot=o.hot.split(/[,;]/).map(s=>s.trim().toUpperCase()).filter(Boolean);
@@ -348,17 +421,19 @@ function makeScene(o,W,H,img,lines,marks,title,dur){
 
   /* layers: photo, static overlay (panel, ghost, VU faces, lyric shade), then per-frame parts */
   const fx=o.fx||defaultFx(o.size);
+  const fs=(!o.vuStyle||o.vuStyle==='real')?'amber':o.vuStyle;      /* look of the drawn VU face: amber | blue | clear */
+  const ncol=o.vuCol||(fs==='blue'?'#0d0d0d':'#f8e9bd');
   const photoC=document.createElement('canvas');photoC.width=W;photoC.height=H;
-  coverDraw(photoC.getContext('2d'),img,W,H,o.offset);
+  coverDraw(photoC.getContext('2d'),img,W,H,o.offset,o.photoFit);
+  eraseNeedles();
+  const photoMotion=video?null:preparePhotoMotion(img,W,H,o,photoC);
   const ovl=document.createElement('canvas');ovl.width=W;ovl.height=H;
   const g=ovl.getContext('2d');
   g.save();g.scale(sx,sy);
-  if(o.showBars){
+  if(o.showBars&&!o.general){
     g.beginPath();g.moveTo(quad[0][0],quad[0][1]);for(let i=1;i<4;i++)g.lineTo(quad[i][0],quad[i][1]);g.closePath();
     g.fillStyle=o.palette===4?`rgba(5,12,44,${(o.erase?242:150)/255})`:`rgba(20,18,16,${(o.erase?238:140)/255})`;
-    try{g.filter=`blur(${6*sx}px)`;}catch(e){}
-    g.fill();
-    g.filter='none';
+    if(o.erase)g.fill();
     g.fillStyle=o.palette===4?'rgba(90,120,210,.16)':'rgba(150,132,112,.18)';
     for(let i=0;i<n;i++){const x=i*pitch+(pitch-bw)/2;
       for(let s=0;s<SEGS;s++){const top=FH-(s+1)*sp+sp*.14;quadPath(g,x,top,x+bw,top+sp*.72);g.fill();}}
@@ -390,16 +465,45 @@ function makeScene(o,W,H,img,lines,marks,title,dur){
       c.moveTo(px+Math.sin(a)*R*.88,py-Math.cos(a)*R*.88);c.lineTo(px+Math.sin(a)*R*.985,py-Math.cos(a)*R*.985);c.stroke();
       c.fillStyle=db>=0?'#ff5a3c':'#f1c36a';
       c.fillText(db>0?'+'+db:String(db),px+Math.sin(a)*R*.78,py-Math.cos(a)*R*.78);}
-    c.fillStyle='#f1c36a';c.font=`700 ${h*.2}px ${FONTS[3].f}`;c.fillText('VU',px,y+h*.66);
     c.restore();
     c.save();rr(c,x,y,w,h,h*.06);c.strokeStyle='rgba(0,0,0,.65)';c.lineWidth=h*.05;c.stroke();c.restore();
   }
+  function drawFaceBlue(c,r){
+    const {x,y,w,h,R,px,py,am}=geom(r);const ang=v=>-am+2*am*v,top=-Math.PI/2;
+    c.save();rr(c,x,y,w,h,h*.06);c.clip();
+    const bg=c.createLinearGradient(0,y,0,y+h);bg.addColorStop(0,'#1f92f0');bg.addColorStop(1,'#1a73dc');
+    c.fillStyle=bg;c.fillRect(x,y,w,h);
+    const gl=c.createRadialGradient(px,y+h*.55,0,px,y+h*.55,w*.62);
+    gl.addColorStop(0,'rgba(120,225,255,.65)');gl.addColorStop(1,'rgba(120,225,255,0)');
+    c.fillStyle=gl;c.fillRect(x,y,w,h);
+    /* thick, segmented black scale arc */
+    c.lineCap='butt';c.strokeStyle='#0a1422';
+    const ra=R*.9,N=13,gap=.012;
+    for(let k=0;k<N;k++){
+      const v0=k/N+gap,v1=(k+1)/N-gap,late=k>=N-2;
+      c.lineWidth=h*(late?.045:.062);c.beginPath();c.arc(px,py,late?ra*1.015:ra,top+ang(v0),top+ang(v1),false);c.stroke();
+    }
+    /* scale numbers above the arc */
+    c.fillStyle='#0a1422';c.textAlign='center';c.textBaseline='middle';c.font=`700 ${h*.1}px "Barlow Condensed","Arial Narrow",Arial,sans-serif`;
+    for(const [db,v] of VUPOS){const a=ang(v);c.fillText(db>0?'+'+db:String(db),px+Math.sin(a)*R*1.03,py-Math.cos(a)*R*1.03);}
+    /* little centre lamp and the name */
+    c.lineWidth=h*.012;c.beginPath();c.arc(px,y+h*.7,h*.022,0,7);c.stroke();
+    c.beginPath();c.arc(px,y+h*.7,h*.007,0,7);c.fill();
+    c.restore();
+    c.save();rr(c,x,y,w,h,h*.06);c.strokeStyle='rgba(0,0,0,.55)';c.lineWidth=h*.05;c.stroke();c.restore();
+  }
   function needle(c,r,v){
     const {x,y,w,h,R,px,py,am}=geom(r);const a=-am+2*am*clamp(v,0,1.06);
-    const ex=px+Math.sin(a)*R,ey=py-Math.cos(a)*R;
+    const ex=px+Math.sin(a)*R*(fs==='blue'?1.02:1),ey=py-Math.cos(a)*R*(fs==='blue'?1.02:1);
     c.save();rr(c,x,y,w,h,h*.06);c.clip();c.lineCap='round';
-    c.strokeStyle='rgba(0,0,0,.5)';c.lineWidth=h*.024;c.beginPath();c.moveTo(px+h*.015,py+h*.015);c.lineTo(ex+h*.015,ey+h*.015);c.stroke();
-    c.strokeStyle='#f8e9bd';c.lineWidth=h*.014;c.beginPath();c.moveTo(px,py);c.lineTo(ex,ey);c.stroke();
+    if(fs==='blue'){
+      c.strokeStyle='rgba(0,30,80,.28)';c.lineWidth=h*.016;c.beginPath();c.moveTo(px+h*.012,py+h*.012);c.lineTo(ex+h*.012,ey+h*.012);c.stroke();
+      c.strokeStyle=ncol;c.lineWidth=h*.009;c.beginPath();c.moveTo(px,py);c.lineTo(ex,ey);c.stroke();
+    }else{
+      c.strokeStyle='rgba(0,0,0,.5)';c.lineWidth=h*.024;c.beginPath();c.moveTo(px+h*.015,py+h*.015);c.lineTo(ex+h*.015,ey+h*.015);c.stroke();
+      if(fs==='clear'){c.shadowColor=ncol;c.shadowBlur=h*.05;}
+      c.strokeStyle=ncol;c.lineWidth=h*.014;c.beginPath();c.moveTo(px,py);c.lineTo(ex,ey);c.stroke();
+    }
     c.restore();
   }
   function tri(c,im,s0,s1,s2,d0,d1,d2){
@@ -432,8 +536,106 @@ function makeScene(o,W,H,img,lines,marks,title,dur){
     return {fw,fh,map:homo(q),nc,ng:nc.getContext('2d')};
   }
   function needleW(c,u,v){u.ng.clearRect(0,0,u.fw,u.fh);needle(u.ng,[0,0,u.fw,u.fh],v);warp(c,u.nc,u.map,12,8);}
-  const vus=o.vu?allVu(fx).map(mkVu):[];
-  vus.forEach(u=>{const fc=document.createElement('canvas');fc.width=u.fw;fc.height=u.fh;drawFace(fc.getContext('2d'),[0,0,u.fw,u.fh]);warp(g,fc,u.map,12,8);});
+
+  /* ---- keep the photo's own VU face: wipe only the old needle (onion-peel inpaint), then move a new needle ---- */
+  function eraseLine(g,x0,y0,x1,y1,wd,q,blue){
+    /* remove a thin stroke by interpolating across it, from the real pixels on both of its edges */
+    const blueRadius=blue?Math.max(4,wd,Math.min(24,Math.hypot(x1-x0,y1-y0)*.13)):0;
+    const CW=g.canvas.width,CH=g.canvas.height,m=Math.ceil(Math.max(wd,blueRadius*2))+12;
+    const bx=Math.max(0,Math.floor(Math.min(x0,x1)-m)),by=Math.max(0,Math.floor(Math.min(y0,y1)-m));
+    const bw=Math.min(CW,Math.ceil(Math.max(x0,x1)+m))-bx,bh=Math.min(CH,Math.ceil(Math.max(y0,y1)+m))-by;
+    if(bw<4||bh<4)return;
+    const id=g.getImageData(bx,by,bw,bh),d=id.data,src=new Uint8ClampedArray(d);
+    const L=Math.hypot(x1-x0,y1-y0)||1,ux=(x1-x0)/L,uy=(y1-y0)/L,nx=-uy,ny=ux,hw=wd/2,edge=hw+2;
+    const smp=(x,y,k)=>{x=Math.min(bw-1.001,Math.max(0,x));y=Math.min(bh-1.001,Math.max(0,y));
+      const xi=x|0,yi=y|0,fx=x-xi,fy=y-yi,i=(yi*bw+xi)*4;
+      return src[i+k]*(1-fx)*(1-fy)+src[i+4+k]*fx*(1-fy)+src[i+bw*4+k]*(1-fx)*fy+src[i+bw*4+4+k]*fx*fy;};
+    const inDial=(x,y)=>inside(q,(x+bx+.5)/sx,(y+by+.5)/sy);
+    const blueSample=(x,y)=>{
+      if(x<0||y<0||x>=bw-1||y>=bh-1||!inDial(x,y))return null;
+      const rgb=[smp(x,y,0),smp(x,y,1),smp(x,y,2)];
+      return rgb[2]>=105&&rgb[1]>=82&&rgb[2]>rgb[0]+48?rgb:null;
+    };
+    const lum=rgb=>rgb[0]*.21+rgb[1]*.72+rgb[2]*.07;
+    const profiles=[];
+    if(blue){
+      // Sample beyond the stroke and its shadow without picking up the dark bezel.
+      const step=Math.max(1,blueRadius*.19);
+      const extension=Math.max(3,blueRadius*.58),count=Math.ceil(L+2*extension);
+      for(let j=0;j<=count;j++){
+        const along=j-extension;
+        const x=x0-bx-.5+ux*along,y=y0-by-.5+uy*along;
+        const sides=[-1,1].map(sign=>{
+          const candidates=[];
+          for(let off=blueRadius*.62;off<=blueRadius*1.85;off+=step){
+            const shift=off*sign,sample=blueSample(x+nx*shift,y+ny*shift);
+            if(sample)candidates.push({shift,sample});
+          }
+          candidates.sort((a,b)=>lum(b.sample)-lum(a.sample));
+          return candidates[Math.floor(candidates.length*.27)];
+        });
+        profiles.push({sides,extension});
+      }
+    }
+    for(let y=0;y<bh;y++)for(let x=0;x<bw;x++){
+      const dx=x+bx+.5-x0,dy=y+by+.5-y0,t=Math.min(L,Math.max(0,dx*ux+dy*uy));
+      const ex=dx-ux*t,ey=dy-uy*t;
+      if(!inDial(x,y)||ex*ex+ey*ey>(blue?blueRadius:hw)**2)continue;
+      if(blue){
+        const along=dx*ux+dy*uy,across=dx*nx+dy*ny;
+        const extension=profiles[0].extension;
+        const profile=profiles[Math.round(along+extension)];
+        if(!profile)continue;
+        const [left,right]=profile.sides;
+        if(!left&&!right)continue;
+        const blend=left&&right?clamp((across-left.shift)/(right.shift-left.shift),0,1):0;
+        const a=(left||right).sample,b=(right||left).sample;
+        const target=a.map((v,k)=>v+(b[k]-v)*blend),i=(y*bw+x)*4;
+        const deficit=lum(target)-(.21*src[i]+.72*src[i+1]+.07*src[i+2]);
+        // Repair only pixels darker than their illuminated surroundings.
+        const fade=clamp((blueRadius-Math.abs(across))/(blueRadius*.31),0,1);
+        const opacity=clamp((deficit-2)/12,0,1)*fade;
+        for(let k=0;k<3;k++)d[i+k]=src[i+k]+(target[k]-src[i+k])*opacity;
+        continue;
+      }
+      const dd=dx*nx+dy*ny,wt=(dd+edge)/(2*edge),i=(y*bw+x)*4;
+      for(let k=0;k<3;k++)d[i+k]=smp(x-nx*(dd+edge),y-ny*(dd+edge),k)*(1-wt)+smp(x+nx*(edge-dd),y+ny*(edge-dd),k)*wt;
+    }
+    g.putImageData(id,bx,by);
+  }
+  const vnA=o.vu&&o.vuReal?allVu(fx).map((q,i)=>{const n=fx.vn?.[i];return q&&(!n?.needsTip||n.tip)?needleForQuad(q,n):null;}):[];
+  function eraseNeedles(){
+    if(!(o.vu&&o.vuReal))return;
+    const g=photoC.getContext('2d',{willReadFrequently:true});
+    allVu(fx).forEach((q,i)=>{
+      if(!q)return;
+      const calibration=fx.vn?.[i];
+      if(!calibration?.tip)return;
+      const n=needleForQuad(q,calibration);
+      eraseLine(g,n.p[0]*sx,n.p[1]*sy,n.tip[0]*sx,n.tip[1]*sy,Math.max(2,n.ew*sx),q,calibration.color==='#10364a');
+    });
+  }
+  function realNeedles(c,f,idle){
+    vnA.forEach((n,j)=>{
+      if(!n)return;
+      const q=allVu(fx)[j];
+      const v=clamp(idle?idle[j%2]:(j%2?f.vr:f.vl),0,1);
+      const angleA=Math.atan2(n.a[1]-n.p[1],n.a[0]-n.p[0]);
+      const angleB=Math.atan2(n.b[1]-n.p[1],n.b[0]-n.p[0]);
+      const sweep=Math.atan2(Math.sin(angleB-angleA),Math.cos(angleB-angleA));
+      const angle=angleA+sweep*v;
+      const radiusA=Math.hypot(n.a[0]-n.p[0],n.a[1]-n.p[1]);
+      const radiusB=Math.hypot(n.b[0]-n.p[0],n.b[1]-n.p[1]);
+      const radius=n.tip?Math.hypot(n.tip[0]-n.p[0],n.tip[1]-n.p[1]):Math.min(radiusA,radiusB)*.92;
+      c.save();
+      c.beginPath();q.forEach((p,i)=>i?c.lineTo(...p):c.moveTo(...p));c.closePath();c.clip();
+      c.beginPath();c.moveTo(...n.p);c.lineTo(n.p[0]+Math.cos(angle)*radius,n.p[1]+Math.sin(angle)*radius);
+      c.strokeStyle=o.vuCol||n.color||'#f7cb55';c.lineWidth=n.w;c.lineCap='round';c.stroke();
+      c.restore();
+    });
+  }
+  const vus=o.vu&&!o.vuReal?allVu(fx).map(q=>q?mkVu(q):null):[];
+  vus.forEach(u=>{if(!u||fs==='clear')return;const fc=document.createElement('canvas');fc.width=u.fw;fc.height=u.fh;(fs==='blue'?drawFaceBlue:drawFace)(fc.getContext('2d'),[0,0,u.fw,u.fh]);warp(g,fc,u.map,12,8);});
   const amax=(style==='rack'?.82:style==='neon'?.55:style==='karaoke'?.38:style==='label'?.2:['word','type','pop'].includes(style)?.3:0)*clamp(o.shade,0,1);
   if(amax>0){
     const a0=zy0>0?0:amax,a1=zy1<lh?0:amax;
@@ -446,10 +648,10 @@ function makeScene(o,W,H,img,lines,marks,title,dur){
 
   /* speaker: a feathered, zoomed copy of the photo around the cone */
   function mkRing(R){const d=Math.max(8,Math.ceil(2*R)),c=document.createElement('canvas');c.width=d;c.height=d;return {d,c,g:c.getContext('2d')};}
-  const spks=o.spk?allSp(fx).map(s=>{const SR=clamp(s[2]*sx,8,Math.max(W,H));return {X:s[0]*sx,Y:s[1]*sy,A:mkRing(SR),B:mkRing(SR*.4)};}):[];
+  const spks=o.spk?allSp(fx).filter(Boolean).map(s=>{const SR=clamp(s[2]*sx,8,Math.max(W,H));return {X:s[0]*sx,Y:s[1]*sy,A:mkRing(SR),B:mkRing(SR*.4)};}):[];
   function drawSpk(c,z1,z2){for(const s of spks){ring(c,s.A,z1,s);ring(c,s.B,z2,s);}}
   function ring(c,rg,z,P){const SX=P.X,SY=P.Y;
-    if(!rg||z<1.002)return;
+    if(!rg||z<1.0005)return;
     const d=rg.d,tg=rg.g;
     tg.globalCompositeOperation='source-over';tg.clearRect(0,0,d,d);
     const sw=d/z;tg.drawImage(photoC,SX-sw/2,SY-sw/2,sw,sw,0,0,d,d);
@@ -470,6 +672,7 @@ function makeScene(o,W,H,img,lines,marks,title,dur){
   }
   const segC=Array.from({length:SEGS},(_,s)=>mcCol(s/(SEGS-1)));
   function bars(c,lvl,peak){
+    quadPath(c,0,0,FW,FH);c.clip();
     for(let i=0;i<n;i++){
       const on=clamp(Math.round(lvl[i]*SEGS),0,SEGS),pk=clamp(Math.round(peak[i]*SEGS),0,SEGS-1);
       const x=i*pitch+(pitch-bw)/2,base=cols[i];
@@ -627,14 +830,38 @@ function makeScene(o,W,H,img,lines,marks,title,dur){
     const L0=inl?lines[idx]:null,info=L0?{u:(t-L0.s)/Math.max(.05,L0.e-L0.s),age:t-L0.s}:null;
     block(c,prev,cur,idx+1<lines.length?lines[idx+1].t:'',sec,true,info);
   }
+  function drawBackground(c,t){
+    if(video?.readyState>=2){c.drawImage(photoC,0,0);coverDraw(c,video,W,H,o.offset,o.photoFit);return;}
+    if(!photoMotion||!o.motionPower||t===0){c.drawImage(photoC,0,0);return;}
+    const strength=Math.min(W,H)*o.motionPower;
+    const phase=(period)=>Math.sin(t*2*Math.PI/period);
+    const z=1+.043*o.motionPower*(1-Math.cos(Math.max(0,t)*2*Math.PI/14))/2;
+    const x=(W-W*z)/2,y=(H-H*z)/2;
+    c.drawImage(photoC,x,y,W*z,H*z);
+    for(const layer of photoMotion){
+      if(layer.kind==='water'){
+        const band=Math.max(1,Math.round(H/96));
+        for(let row=0;row<H;row+=band){
+          const height=Math.min(band,H-row);
+          const offset=strength*.006*Math.sin(t*1.8+row/H*65)*Math.min(1,t*2);
+          c.drawImage(layer.canvas,0,row,W,height,x+offset,y+row*z,W*z,height*z);
+        }
+      }else{
+        const dx=strength*(layer.kind==='sky'?.016*phase(28):layer.kind==='leaves'?.004*phase(4):.019*phase(12));
+        const dy=layer.kind==='leaves'?strength*.002*phase(6):0;
+        c.drawImage(layer.canvas,x+dx,y+dy,W*z,H*z);
+      }
+    }
+  }
   function frame(c,t,lvl,peak,kick,f){
     f=f||{vl:.5,vr:.5,sp:0};
-    c.drawImage(photoC,0,0);
-    if(o.spk)drawSpk(c,1+o.spkAmt*.16*f.sp,1+o.spkAmt*.34*f.sp);
+    drawBackground(c,t);
+    if(o.spk)drawSpk(c,1+o.spkAmt*.018*f.sp,1+o.spkAmt*.032*f.sp);
     c.drawImage(ovl,0,0);
     c.save();c.scale(sx,sy);
     if(o.showBars){c.save();bars(c,lvl,peak);c.restore();}
-    vus.forEach((u,i)=>needleW(c,u,i%2?f.vr:f.vl));
+    vus.forEach((u,i)=>{if(u)needleW(c,u,i%2?f.vr:f.vl);});
+    realNeedles(c,f);
     lyrics(c,t);
     if(o.progress)progress(c,t);
     c.restore();
@@ -644,12 +871,13 @@ function makeScene(o,W,H,img,lines,marks,title,dur){
     const idle=[.78,.78,.9,.72,.66,.7,.5,.4];
     const lv=Array.from({length:n},(_,i)=>idle[clamp(Math.floor(i*idle.length/n),0,idle.length-1)]);
     const pk=lv.map(v=>Math.min(1,v+.07));
-    c.drawImage(photoC,0,0);
-    if(o.spk)drawSpk(c,1+o.spkAmt*.16*.6,1+o.spkAmt*.34*.6);
+    drawBackground(c,0);
+    if(o.spk)drawSpk(c,1+o.spkAmt*.018*.6,1+o.spkAmt*.032*.6);
     c.drawImage(ovl,0,0);
     c.save();c.scale(sx,sy);
     if(o.showBars){c.save();bars(c,lv,pk);c.restore();}
-    vus.forEach((u,i)=>needleW(c,u,i%2?.64:.55));
+    vus.forEach((u,i)=>{if(u)needleW(c,u,i%2?.64:.55);});
+    realNeedles(c,null,[.55,.64]);
     block(c,'Previous line of the song','The line being sung now','Next line comes here','Chorus',true);
     if(o.progress)progress(c,62);
     c.restore();
@@ -676,57 +904,57 @@ class FFT{
     }
   }
 }
-async function analyze(mono,sr,fps,nf,bands,prog){
-  const size=2048,bins=size/2+1,fft=new FFT(size);
-  const win=new Float32Array(size);
-  for(let i=0;i<size;i++)win[i]=.42-.5*Math.cos(2*Math.PI*i/(size-1))+.08*Math.cos(4*Math.PI*i/(size-1));
-  const re=new Float32Array(size),im=new Float32Array(size),prev=new Float32Array(bins),byteV=new Float32Array(bins);
-  const nyq=sr/2,ba=[],bb=[];
-  for(let i=0;i<bands;i++){
-    const f0=60*Math.pow(12000/60,i/bands),f1=60*Math.pow(12000/60,(i+1)/bands);
-    ba[i]=clamp(Math.floor(f0/nyq*bins),0,bins-2);bb[i]=Math.min(bins,Math.max(ba[i]+1,Math.ceil(f1/nyq*bins)));
-  }
-  const raw=[],bass=new Float32Array(nf);
+async function analyze(mono,sr,fps,nf,bands,prog,channels,active=()=>true){
+  const size=4096,bins=size/2+1,fft=new FFT(size);
+  const win=Float32Array.from({length:size},(_,i)=>.5-.5*Math.cos(2*Math.PI*i/(size-1)));
+  const gain=2/win.reduce((sum,v)=>sum+v,0);
+  const re=new Float32Array(size),im=new Float32Array(size),power=new Float32Array(bins);
+  const input=channels?.length?channels:[mono],binHz=sr/size;
+  const edges=Array.from({length:bands+1},(_,i)=>35*Math.pow(Math.min(16000,sr*.48)/35,i/bands)/binHz);
+  const lvl=[],peak=[],l=new Float32Array(bands),pk=new Float32Array(bands),hold=new Float32Array(bands);
+  const kick=new Float32Array(nf),vl=new Float32Array(nf),vr=new Float32Array(nf),sp=new Float32Array(nf);
+  const follow=(before,value,attack,release)=>before+(value-before)*(1-Math.exp(-1/fps/(value>before?attack:release)));
+  const db=(value,floor,ceiling)=>clamp((20*Math.log10(Math.max(1e-9,value))-floor)/(ceiling-floor),0,1);
+  let average=0,previous=0,last=-1;
   for(let f=0;f<nf;f++){
-    if(f%160===0){if(prog)prog(f/nf);await tick();}
-    const start=Math.floor(f*sr/fps)-size/2;
-    for(let i=0;i<size;i++){const idx=start+i;re[i]=(idx>=0&&idx<mono.length)?mono[idx]*win[i]:0;im[i]=0;}
-    fft.run(re,im);
-    for(let k=0;k<bins;k++){
-      const m=Math.sqrt(re[k]*re[k]+im[k]*im[k])/size;
-      prev[k]=.7*prev[k]+.3*m;
-      byteV[k]=clamp((20*Math.log10(prev[k]+1e-9)+100)/70,0,1);
+    if(f%64===0){prog?.(f/nf);await tick();if(!active())return null;}
+    const start=Math.floor(f*sr/fps)-size/2,rms=[];
+    power.fill(0);
+    for(const data of input){
+      let energy=0,weight=0;
+      for(let i=0;i<size;i++){
+        const value=data[start+i]||0;
+        re[i]=value*win[i];im[i]=0;
+        energy+=value*value*win[i];weight+=win[i];
+      }
+      rms.push(Math.sqrt(energy/weight));
+      fft.run(re,im);
+      for(let k=1;k<bins;k++)power[k]+=(re[k]*re[k]+im[k]*im[k])*gain*gain/input.length;
     }
-    const row=new Float32Array(bands);
-    for(let i=0;i<bands;i++){let s=0;for(let k=ba[i];k<bb[i];k++)s+=byteV[k];
-      row[i]=Math.pow(s/(bb[i]-ba[i]),1.45)*(1+i*.06*8/bands);}
-    raw.push(row);
-    let bs=0;for(let k=1;k<=8;k++)bs+=byteV[k];bass[f]=bs/8;
-  }
-  for(let i=0;i<bands;i++){
-    const col=new Float32Array(nf);for(let f=0;f<nf;f++)col[f]=raw[f][i];col.sort();
-    const p=col[clamp(Math.floor(.98*(nf-1)),0,nf-1)];
-    for(let f=0;f<nf;f++)raw[f][i]=clamp(raw[f][i]/Math.max(p,1e-3)*.93,0,1);
-  }
-  const lvl=[],peak=[],l=new Float32Array(bands),pk=new Float32Array(bands),pv=new Float32Array(bands);
-  for(let f=0;f<nf;f++){
     const a=new Float32Array(bands),b=new Float32Array(bands);
     for(let i=0;i<bands;i++){
-      const v=raw[f][i];l[i]=v>l[i]?v:l[i]*.84+v*.16;
-      if(l[i]>=pk[i]){pk[i]=l[i];pv[i]=0;}else{pv[i]+=.0018;pk[i]=Math.max(0,pk[i]-pv[i]);}
+      let amplitude=0;
+      const lo=Math.max(1,Math.ceil(edges[i])),hi=Math.min(bins,Math.ceil(edges[i+1]));
+      if(hi<=lo)amplitude=power[Math.min(bins-1,Math.round((edges[i]+edges[i+1])*.5))];
+      else for(let k=lo;k<hi;k++)amplitude=Math.max(amplitude,power[k]);
+      l[i]=follow(l[i],db(Math.sqrt(amplitude),-60,-9),.035,.16);
+      if(l[i]>=pk[i]){pk[i]=l[i];hold[i]=.13;}
+      else if(hold[i]>0)hold[i]-=1/fps;
+      else pk[i]=Math.max(l[i],pk[i]-1.15/fps);
       a[i]=l[i];b[i]=pk[i];
     }
     lvl.push(a);peak.push(b);
+    let bassPower=0;
+    for(let k=Math.ceil(38/binHz);k<=Math.min(bins-1,Math.floor(145/binHz));k++)bassPower+=power[k];
+    const bass=db(Math.sqrt(bassPower),-51,-10),t=f/fps;
+    if(bass>.23&&bass-average>.14&&bass-previous>.045&&t-last>.15)last=t;
+    kick[f]=clamp(1-(t-last)/.19,0,1);
+    average=follow(average,bass,.20,.25);previous=bass;
+    vl[f]=follow(vl[f-1]||0,db(rms[0],-43,-8),.09,.26);
+    vr[f]=follow(vr[f-1]||0,db(rms[1]??rms[0],-43,-8),.09,.26);
+    sp[f]=follow(sp[f-1]||0,clamp(.48*bass+.52*kick[f],0,1),.027,.105);
   }
-  const kick=new Float32Array(nf);let bavg=0,last=-9;
-  for(let f=0;f<nf;f++){
-    const t=f/fps;
-    if(bass[f]-bavg>.07&&bass[f]>.55&&t-last>.18)last=t;
-    kick[f]=Math.max(0,1-(t-last)/.24);
-    bavg=bavg*.95+bass[f]*.05;
-  }
-  const fxt=fxTracks(lvl,kick,bands,nf);
-  return {fps,bands,nf,lvl,peak,kick,vl:fxt.vl,vr:fxt.vr,sp:fxt.sp};
+  return {fps,bands,nf,lvl,peak,kick,vl,vr,sp};
 }
 
 /* ---------------------------------------------------------------- lyrics */
@@ -861,8 +1089,30 @@ const setProg=p=>{$('prog').value=Math.round(clamp(p,0,1)*1000);};
 const fxOf=(an,f)=>({vl:an.vl[f],vr:an.vr[f],sp:an.sp[f]});
 function fxNow(){if(!O.fx)O.fx=defaultFx(O.size);return O.fx;}
 const allVu=f=>[f.vl,f.vr,...(f.vx||[])];
+function needleForQuad(q,n={}){
+  const map=homo(q);
+  const width=Math.hypot(q[1][0]-q[0][0],q[1][1]-q[0][1]);
+  return {p:map(...(n.p||[.5,.91])),a:map(...(n.a||[.14,.48])),b:map(...(n.b||[.86,.48])),
+    tip:n.tip?map(...n.tip):null,color:n.color,w:Math.max(1.4,width*(n.width||.009)),
+    ew:Math.max(2,width*(n.width||.009)*1.7)};
+}
+function toQuad(q,p){
+  const [origin,x,z,y]=q;
+  const cross=(a,b)=>a[0]*b[1]-a[1]*b[0],sub=(a,b)=>[a[0]-b[0],a[1]-b[1]];
+  const dx=sub(x,z),dy=sub(y,z),delta=sub(sub(origin,x),sub(y,z)),d=cross(dx,dy);
+  const g=cross(delta,dy)/d,h=cross(dx,delta)/d;
+  const u=sub(x.map(v=>v*(1+g)),origin),v=sub(y.map(v=>v*(1+h)),origin);
+  const a=sub(u,p.map(n=>n*g)),b=sub(v,p.map(n=>n*h)),c=sub(p,origin),den=cross(a,b);
+  return Math.abs(den)>1e-5?[cross(c,b)/den,cross(a,c)/den]:[0,0];
+}
+function validQuad(q){
+  return q.every((p,i)=>{
+    const a=q[(i+1)%4],b=q[(i+2)%4];
+    return (a[0]-p[0])*(b[1]-a[1])-(a[1]-p[1])*(b[0]-a[0])>40;
+  });
+}
 const allSp=f=>[f.sp,...(f.sx||[])];
-function quadNow(){if(!O.quad)O.quad=defaultQuad(O.size);return O.quad;}
+function quadNow(){if(!O.quad)O.quad=O.general?photoSpectrumQuad(O.size):defaultQuad(O.size);return O.quad;}
 
 /* ---------------------------------------------------------------- preview */
 function sizePreview(){
@@ -875,12 +1125,12 @@ function rebuild(){
   if(!img){paint();return;}
   sizePreview();
   plain=document.createElement('canvas');plain.width=W;plain.height=H;
-  coverDraw(plain.getContext('2d'),img,W,H,O.offset);
-  scene=makeScene(O,W,H,img,lines,marks,title,dur||180);
+  coverDraw(plain.getContext('2d'),img,W,H,O.offset,O.photoFit);
+  scene=makeScene(O,W,H,img,lines,marks,title,dur||180,backgroundVideo);
   paint();
 }
 function levelsAt(t){
-  if(!A)return null;const f=clamp(Math.floor(t*A.fps),0,A.nf-1);
+  if(!A||A.bands!==O.bars)return null;const f=clamp(Math.floor(t*A.fps),0,A.nf-1);
   return {l:A.lvl[f],p:A.peak[f],k:A.kick[f],fx:{vl:A.vl[f],vr:A.vr[f],sp:A.sp[f]}};
 }
 function paint(){
@@ -889,16 +1139,21 @@ function paint(){
   const g=O.guide||!!drag;
   if(g)ctx.drawImage(plain,0,0);
   else{
+    if(backgroundVideo&&!busy)followBackground(backgroundVideo,curT);
     const lv=live?levelsAt(curT):null;
     if(lv)scene.frame(ctx,curT,lv.l,lv.p,lv.k,lv.fx);else scene.preview(ctx);
   }
-  overlay(g);
+  if(g)overlay(g);
 }
 function pxr(){const w=cv.clientWidth||cv.width;return cv.width/w;}
 function rectCorners(rc){return rc;}
 function dragPoint(){
   if(!drag)return null;
   if(drag.kind==='q')return quadNow()[drag.i];
+  if(drag.kind==='n'){
+    const n=needleForQuad(allVu(fxNow())[drag.j],fxNow().vn?.[drag.j]);
+    return n[drag.key]||n.a.map((v,k)=>n.p[k]+.8*(v-n.p[k]));
+  }
   if(drag.kind==='v'){return rectCorners(allVu(fxNow())[drag.j])[drag.i];}
   if(drag.kind==='s'){const s=allSp(fxNow())[drag.j||0];return drag.i===0?[s[0],s[1]]:[s[0]+s[2],s[1]];}
   return null;
@@ -923,15 +1178,26 @@ function overlay(g){
   const f=(O.vu||O.spk)?fxNow():null;
   if(O.vu){
     ctx.strokeStyle='#21deff';ctx.fillStyle='#21deff';ctx.lineWidth=2.5*r;
-    allVu(f).forEach(rc=>{ctx.beginPath();rc.forEach((p,i)=>{if(i)ctx.lineTo(p[0]*k,p[1]*k);else ctx.moveTo(p[0]*k,p[1]*k);});ctx.closePath();ctx.stroke();
+    allVu(f).forEach(rc=>{if(!rc)return;ctx.beginPath();rc.forEach((p,i)=>{if(i)ctx.lineTo(p[0]*k,p[1]*k);else ctx.moveTo(p[0]*k,p[1]*k);});ctx.closePath();ctx.stroke();
       rc.forEach(p=>{ctx.beginPath();ctx.arc(p[0]*k,p[1]*k,8*r,0,7);ctx.fill();});});
+  }
+  if(O.vu&&O.vuReal){
+    allVu(f).forEach((q,i)=>{
+      if(!q)return;
+      const n=needleForQuad(q,f.vn?.[i]),tip=n.tip||n.a.map((v,k)=>n.p[k]+.8*(v-n.p[k]));
+      ctx.strokeStyle='#ff4fd8';ctx.lineWidth=2*r;
+      ctx.setLineDash([6*r,5*r]);ctx.beginPath();ctx.moveTo(n.a[0]*k,n.a[1]*k);ctx.lineTo(n.p[0]*k,n.p[1]*k);ctx.lineTo(n.b[0]*k,n.b[1]*k);ctx.stroke();ctx.setLineDash([]);
+      for(const [key,p] of Object.entries({p:n.p,a:n.a,b:n.b,tip})){
+        ctx.fillStyle=key==='tip'?'#fff':'#ff4fd8';ctx.beginPath();ctx.arc(p[0]*k,p[1]*k,key==='tip'?5*r:7*r,0,7);ctx.fill();
+      }
+    });
   }
   if(O.spk){
     ctx.strokeStyle='#ff9628';ctx.fillStyle='#ff9628';ctx.lineWidth=2.5*r;
-    allSp(f).forEach(s=>{
+    allSp(f).filter(Boolean).forEach(s=>{
       ctx.beginPath();ctx.arc(s[0]*k,s[1]*k,s[2]*k,0,7);ctx.stroke();
       ctx.beginPath();ctx.arc(s[0]*k,s[1]*k,8*r,0,7);ctx.fill();
-      ctx.beginPath();ctx.arc((s[0]+s[2])*k,s[1]*k,8*r,0,7);ctx.fill();
+      for(const sign of [-1,1]){ctx.beginPath();ctx.arc((s[0]+sign*s[2])*k,s[1]*k,8*r,0,7);ctx.fill();}
     });
   }
   const dp=dragPoint();if(dp&&plain)loupe(dp,k,r);
@@ -957,19 +1223,24 @@ function hit(lx,ly,thr){
   let best=thr,res=null;
   const test=(x,y,d)=>{const e=Math.hypot(x-lx,y-ly);if(e<best){best=e;res=d;}};
   if(O.showBars)quadNow().forEach((p,i)=>test(p[0],p[1],{kind:'q',i}));
-  if(O.vu){allVu(fxNow()).forEach((rc,j)=>rectCorners(rc).forEach((p,i)=>test(p[0],p[1],{kind:'v',i,j})));}
-  if(O.spk){allSp(fxNow()).forEach((s,j)=>{test(s[0],s[1],{kind:'s',i:0,j});test(s[0]+s[2],s[1],{kind:'s',i:1,j});});}
+  if(O.vu&&O.vuReal)allVu(fxNow()).forEach((q,j)=>{
+    if(!q)return;
+    const n=needleForQuad(q,fxNow().vn?.[j]),tip=n.tip||n.a.map((v,k)=>n.p[k]+.8*(v-n.p[k]));
+    for(const [key,p] of Object.entries({p:n.p,a:n.a,b:n.b,tip}))test(p[0],p[1],{kind:'n',j,key});
+  });
+  if(O.vu){allVu(fxNow()).forEach((rc,j)=>rc&&rectCorners(rc).forEach((p,i)=>test(p[0],p[1],{kind:'v',i,j})));}
+  if(O.spk){allSp(fxNow()).forEach((s,j)=>{if(!s)return;test(s[0],s[1],{kind:'s',i:0,j});test(s[0]+s[2],s[1],{kind:'s',i:1,j});test(s[0]-s[2],s[1],{kind:'s',i:1,j});});}
   return res;
 }
 cv.addEventListener('pointerdown',e=>{
-  if(!img||busy)return;
+  if(!img||busy||e.button!==0)return;
   const [lx,ly,rw]=toLogical(e),[lw]=SIZES[O.size];
-  let d=hit(lx,ly,34/rw*lw);
+  let d=hit(lx,ly,14/rw*lw);
   if(!d){
     const f=(O.vu||O.spk)?fxNow():null;
     if(O.showBars&&inside(quadNow(),lx,ly))d={kind:'qbody'};
-    else if(O.vu&&allVu(f).some((rc,j)=>{const ok=inside(rc,lx,ly);if(ok)d={kind:'vbody',j};return ok;})){}
-    else if(O.spk&&allSp(f).some((s,j)=>{const ok=Math.hypot(lx-s[0],ly-s[1])<=s[2];if(ok)d={kind:'sbody',j};return ok;})){}
+    else if(O.vu&&allVu(f).some((rc,j)=>{const ok=rc&&inside(rc,lx,ly);if(ok)d={kind:'vbody',j};return ok;})){}
+    else if(O.spk&&allSp(f).some((s,j)=>{const ok=s&&Math.hypot(lx-s[0],ly-s[1])<=s[2];if(ok)d={kind:'sbody',j};return ok;})){}
     else if(O.showBars)d={kind:'new'};
   }
   if(!d)return;
@@ -983,7 +1254,7 @@ cv.addEventListener('pointermove',e=>{
   const d=drag;if(!d)return;
   const [lx,ly]=toLogical(e),[lw,lh]=SIZES[O.size];
   const dx0=lx-d.lastX,dy0=ly-d.lastY;
-  if(d.kind==='q'){quadNow()[d.i]=[clamp(lx+d.offX,0,lw),clamp(ly+d.offY,0,lh)];}
+  if(d.kind==='q'){moveCorner(quadNow(),d.i,lx+d.offX,ly+d.offY,lw,lh);}
   else if(d.kind==='qbody'){
     const q=quadNow();let dx=dx0,dy=dy0;
     for(const p of q){if(p[0]+dx<0||p[0]+dx>lw)dx=0;if(p[1]+dy<0||p[1]+dy>lh)dy=0;}
@@ -993,8 +1264,12 @@ cv.addEventListener('pointermove',e=>{
       const l=Math.min(d.startX,lx),r=Math.max(d.startX,lx),t=Math.min(d.startY,ly),b=Math.max(d.startY,ly);
       O.quad=[[l,t],[r,t],[r,b],[l,b]];
     }
+  }else if(d.kind==='n'){
+    const f=fxNow(),q=allVu(f)[d.j];
+    f.vn??=[];f.vn[d.j]??={};
+    f.vn[d.j][d.key]=toQuad(q,[clamp(lx+d.offX,0,lw),clamp(ly+d.offY,0,lh)]).map(v=>clamp(v,0,1));
   }else if(d.kind==='v'){
-    allVu(fxNow())[d.j][d.i]=[clamp(lx+d.offX,0,lw),clamp(ly+d.offY,0,lh)];
+    moveCorner(allVu(fxNow())[d.j],d.i,lx+d.offX,ly+d.offY,lw,lh);
   }else if(d.kind==='vbody'){
     const rc=allVu(fxNow())[d.j];let dx=dx0,dy=dy0;
     for(const p of rc){if(p[0]+dx<0||p[0]+dx>lw)dx=0;if(p[1]+dy<0||p[1]+dy>lh)dy=0;}
@@ -1011,6 +1286,11 @@ cv.addEventListener('pointermove',e=>{
 const endDrag=()=>{if(drag){drag=null;rebuild();}};
 cv.addEventListener('pointerup',endDrag);cv.addEventListener('pointercancel',endDrag);
 
+function moveCorner(q,i,x,y,w,h){
+  const next=q.slice();
+  next[i]=[clamp(x,0,w),clamp(y,0,h)];
+  if(validQuad(next))q[i]=next[i];
+}
 function nudge(dx,dy){
   const t=+$('selTarget').value,st=+$('selStep').value,[lw,lh]=SIZES[O.size];
   if(t<=4){
@@ -1018,6 +1298,7 @@ function nudge(dx,dy){
     for(const i of idx)q[i]=[clamp(q[i][0]+dx*st,0,lw),clamp(q[i][1]+dy*st,0,lh)];
   }else if(t<=6){
     const key=t===5?'vl':'vr',rc=fxNow()[key];
+    if(!rc)return;
     fxNow()[key]=rc.map(p=>[clamp(p[0]+dx*st,0,lw),clamp(p[1]+dy*st,0,lh)]);
   }else{const s=fxNow().sp;s[0]=clamp(s[0]+dx*st,0,lw);s[1]=clamp(s[1]+dy*st,0,lh);}
   rebuild();
@@ -1030,7 +1311,7 @@ function scaleTarget(f){
     const cx=q.reduce((a,p)=>a+p[0],0)/4,cy=q.reduce((a,p)=>a+p[1],0)/4;
     O.quad=q.map(p=>[clamp(cx+(p[0]-cx)*f,0,lw),clamp(cy+(p[1]-cy)*f,0,lh)]);
   }else if(t<=6){
-    const key=t===5?'vl':'vr',rc=fxNow()[key],cx=rc.reduce((a,p)=>a+p[0],0)/4,cy=rc.reduce((a,p)=>a+p[1],0)/4;
+    const key=t===5?'vl':'vr',rc=fxNow()[key];if(!rc)return;const cx=rc.reduce((a,p)=>a+p[0],0)/4,cy=rc.reduce((a,p)=>a+p[1],0)/4;
     fxNow()[key]=rc.map(p=>[clamp(cx+(p[0]-cx)*f,0,lw),clamp(cy+(p[1]-cy)*f,0,lh)]);
   }else{const s=fxNow().sp;s[2]=Math.max(20,s[2]*f);}
   rebuild();
@@ -1042,7 +1323,7 @@ $('btnReset').onclick=()=>{O.quad=null;O.fx=null;rebuild();};
 /* ---------------------------------------------------------------- auto detect */
 /* Auto-detect the spectrum display, the two VU windows and a speaker in a photo. Returns image-pixel coordinates. */
 function detectRack(img){
-  const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
+  const iw=img.videoWidth||img.naturalWidth||img.width,ih=img.videoHeight||img.naturalHeight||img.height;
   const ds=Math.min(1,640/Math.max(iw,ih)),w=Math.max(8,Math.round(iw*ds)),h=Math.max(8,Math.round(ih*ds));
   const c=document.createElement('canvas');c.width=w;c.height=h;
   const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0,w,h);
@@ -1073,8 +1354,9 @@ function detectRack(img){
     return out;
   }
   const bbox=idx=>{let x0=w,y0=h,x1=0,y1=0;for(const p of idx){const x=p%w,y=(p-x)/w;if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}return{x0,y0,x1,y1};};
-  const res={bars:null,vu:null,spk:null};
+  const res={bars:null,vus:[],needles:[],spks:[]};
   const inv=1/ds;
+  const boxesOverlap=(a,b)=>a.x0<=b.x1&&a.x1>=b.x0&&a.y0<=b.y1&&a.y1>=b.y0;
 
   /* ---- spectrum display: a block holding green + yellow + red LEDs together */
   const led=new Uint8Array(N);
@@ -1089,8 +1371,35 @@ function detectRack(img){
     const bb=bbox(c.idx);if(bb.x1-bb.x0<w*.12)continue;
     if(!best||n>best.n)best={n,bb};
   }
+  if(!best){
+    // Group repeated bright columns even when a display uses a single LED color.
+    const lights=new Uint8Array(N);
+    for(let i=0;i<N;i++)if(S[i]>.54&&V[i]>.52&&(H[i]>65||H[i]<13))lights[i]=1;
+    for(const c of comps(lights,Math.max(3,Math.round(w*.012)))){
+      if(c.idx.length<80)continue;
+      const bb=bbox(c.idx),bw=bb.x1-bb.x0+1,bh=bb.y1-bb.y0+1;
+      if(bw<w*.12||bh<h*.025||bw/bh<1.25||bw/bh>13)continue;
+      const cols=new Uint16Array(bw);
+      for(const p of c.idx)cols[p%w-bb.x0]++;
+      const runs=[];
+      for(let x=0;x<bw;x++){
+        if(cols[x]>=Math.max(2,bh*.13)){
+          if(x===0||cols[x-1]<Math.max(2,bh*.13))runs.push([x,x]);
+          else runs.at(-1)[1]=x;
+        }
+      }
+      if(runs.length<4||runs.length>32)continue;
+      const steps=runs.slice(1).map((p,i)=>(p[0]+p[1]-runs[i][0]-runs[i][1])/2);
+      const pitch=steps.reduce((a,b)=>a+b,0)/steps.length;
+      if(steps.some(step=>Math.abs(step-pitch)>pitch*.42))continue;
+      const score=c.idx.length*runs.length;
+      if(!best||score>best.n)best={n:score,bb,count:runs.length};
+    }
+  }
   if(best){
+    res.barCount=best.count;
     let {x0,y0,x1,y1}=best.bb;
+    const originalHeight=y1-y0;
     /* cyan segments below the green ones */
     for(let k=0;k<Math.round((y1-y0)*.5);k++){
       const y=y1+1;if(y>=h)break;let cy=0;
@@ -1098,23 +1407,126 @@ function detectRack(img){
       if(cy<3)break;y1=y;
     }
     /* the dark window above the tallest bar */
-    for(let k=0;k<Math.round((y1-y0)*.4);k++){
+    for(let k=0;k<Math.round(originalHeight*.5);k++){
       const y=y0-1;if(y<0)break;let dk=0;
-      for(let x=x0;x<=x1;x++)if(V[y*w+x]<.2)dk++;
+      for(let x=x0;x<=x1;x++)if(V[y*w+x]<.085)dk++;
       if(dk<(x1-x0)*.7)break;y0=y;
     }
     const m=1.5;
     res.bars=[[x0-m,y0-m],[x1+m,y0-m],[x1+m,y1+m],[x0-m,y1+m]].map(p=>[p[0]*inv,p[1]*inv]);
-    res._barsBox=best.bb;
+    res._barsBox={x0,y0,x1,y1};
+  }
+
+  /* ---- VU windows, dark-glass type: thin amber/red scale marks on a dark face (no solid amber panel) ---- */
+  const ink=new Uint8Array(N);
+  for(let i=0;i<N;i++){const hh=H[i];if((hh<62||hh>335)&&S[i]>.5&&V[i]>.42)ink[i]=1;}
+  const candB=[];
+  for(const c of comps(ink,Math.max(3,Math.round(w*.007)))){
+    const n=c.idx.length;if(n<40)continue;
+    const bo=bbox(c.idx),bw=bo.x1-bo.x0+1,bh=bo.y1-bo.y0+1;
+    if(bw<w*.1||bw>w*.7||bh<h*.02)continue;
+    const asp=bw/bh;if(asp<1.15||asp>5)continue;
+    if(n/(bw*bh)>.42)continue;                       /* solid paint, cone, knob rim */
+    let red=0;for(const p of c.idx){const hh=H[p];if((hh<14||hh>335)&&S[p]>.6)red++;}
+    if(red/n<.04)continue;                           /* a VU scale has a red zone */
+    if(res._barsBox){const b=res._barsBox;if(bo.x0<=b.x1&&bo.x1>=b.x0&&bo.y0<=b.y1&&bo.y1>=b.y0)continue;}
+    candB.push({n,bo,idx:c.idx});
+  }
+  candB.sort((a,b)=>b.n-a.n);
+  let vuB=candB.slice(0,2).sort((a,b)=>a.bo.x0-b.bo.x0);
+  if(vuB.length>=2&&Math.min(vuB[0].n,vuB[1].n)<Math.max(vuB[0].n,vuB[1].n)*.2)vuB=[];   /* a pair is about the same size */
+  /* the needle: longest bright straight stroke steeper than 35 degrees, so not the scale line (Hough), pivot = its lower end */
+  function findNeedle(bo,idxSet){
+    const x0=Math.max(0,bo.x0-3),x1=Math.min(w-1,bo.x1+3),y0=Math.max(0,bo.y0-3),y1=Math.min(h-1,bo.y1+3);
+    const pts=[];
+    for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const i=y*w+x;if(V[i]>.6&&(S[i]>.3||V[i]>.9)&&(H[i]<70||H[i]>335||S[i]<.3))pts.push(x,y);}
+    if(pts.length<30)return null;
+    const diag=Math.ceil(Math.hypot(x1-x0,y1-y0))+2,NT=111,acc=new Float32Array(NT*(2*diag+1));
+    const cs=[],sn=[];for(let k=0;k<NT;k++){const a=(k-55)*Math.PI/180;cs.push(Math.cos(a));sn.push(Math.sin(a));}
+    for(let q=0;q<pts.length;q+=2){const px_=pts[q]-x0,py_=pts[q+1]-y0;
+      for(let k=0;k<NT;k++){const r=Math.round(px_*cs[k]+py_*sn[k])+diag;acc[k*(2*diag+1)+r]++;}}
+    let best=null;
+    for(let pass=0;pass<16;pass++){
+      let bv=0,bk=0,br=0;
+      for(let k=0;k<NT;k++)for(let r=1;r<2*diag;r++){const v=acc[k*(2*diag+1)+r]+.5*(acc[k*(2*diag+1)+r-1]+acc[k*(2*diag+1)+r+1]);if(v>bv){bv=v;bk=k;br=r;}}
+      if(bv<=0)break;
+      const th=(bk-55)*Math.PI/180,c0=Math.cos(th),s0=Math.sin(th),rho=br-diag;
+      /* support along the line, grouped into runs */
+      const ts=[];let off=0;
+      for(let q=0;q<pts.length;q+=2){const px_=pts[q]-x0,py_=pts[q+1]-y0,d=px_*c0+py_*s0-rho;
+        if(Math.abs(d)<=1.6){ts.push(-px_*s0+py_*c0);off++;}}
+      ts.sort((a,b)=>a-b);
+      let rs=0,bestRun=[0,0],cur0=ts[0],prev=ts[0];
+      for(let q=1;q<=ts.length;q++){
+        if(q===ts.length||ts[q]-prev>3){if(prev-cur0>bestRun[1]-bestRun[0])bestRun=[cur0,prev];cur0=ts[q];}
+        prev=ts[q];}
+      const len=bestRun[1]-bestRun[0];
+      /* real thickness across the stroke: a needle is thin, a lit wedge or glow is wide */
+      const isB=(x,y)=>{x=Math.round(x);y=Math.round(y);if(x<0||y<0||x>=w||y>=h)return false;const i=y*w+x;return V[i]>.6&&(S[i]>.3||V[i]>.9);};
+      const th_=[];
+      for(let q=1;q<=9;q++){const t=bestRun[0]+(bestRun[1]-bestRun[0])*q/10;
+        const cx=x0+rho*c0-t*s0,cy=y0+rho*s0+t*c0;let run=1;
+        for(let d=1;d<=30&&isB(cx+c0*d,cy+s0*d);d++)run++;
+        for(let d=1;d<=30&&isB(cx-c0*d,cy-s0*d);d++)run++;
+        th_.push(run);}
+      th_.sort((a,b)=>a-b);const thick=th_[4];
+      const score=len*Math.min(1,off/Math.max(1,len*1.2))/(1+Math.max(0,thick-5)/3);
+      if(!best||score>best.score)best={score,len,th,rho,t0:bestRun[0],t1:bestRun[1],x0,y0,c0,s0,thick};
+      /* suppress this peak and its neighbours, look for the next */
+      for(let k=Math.max(0,bk-3);k<=Math.min(NT-1,bk+3);k++)for(let r=Math.max(0,br-9);r<=Math.min(2*diag,br+9);r++)acc[k*(2*diag+1)+r]=0;
+    }
+    if(!best||best.len<Math.max(12,(bo.y1-bo.y0)*.35))return null;
+    /* line end points in image space; t runs along (-sin,cos), the line point at t=0 is rho*(cos,sin) */
+    const P=t=>[x0+best.rho*best.c0-t*best.s0,y0+best.rho*best.s0+t*best.c0];
+    let a=P(best.t0),b=P(best.t1);
+    const low=a[1]>b[1]?a:b,high=a[1]>b[1]?b:a;
+    /* thickness: bright pixels within 6px of the line / length */
+    let cnt=0;
+    for(let q=0;q<pts.length;q+=2){const d=Math.abs((pts[q]-x0)*best.c0+(pts[q+1]-y0)*best.s0-best.rho);if(d<=6)cnt++;}
+    const wid=clamp(best.thick,2,12);
+    /* scale ends: leftmost / rightmost ink of the window, away from the needle and the lower label */
+    const nl=(x,y)=>Math.abs((x-x0)*best.c0+(y-y0)*best.s0-best.rho);
+    const sp=[];let mnx=1e9,mxx=-1e9;
+    for(const p of idxSet){const x=p%w,y=(p-x)/w;if(y>low[1]-best.len*.08||nl(x,y)<6)continue;sp.push(x,y);if(x<mnx)mnx=x;if(x>mxx)mxx=x;}
+    if(sp.length<8)return null;
+    const ex=(side)=>{let sx_=0,sy_=0,n_=0;const lim=(mxx-mnx)*.07+2;
+      for(let q=0;q<sp.length;q+=2){if(side<0?sp[q]<=mnx+lim:sp[q]>=mxx-lim){sx_+=sp[q];sy_+=sp[q+1];n_++;}}
+      return [sx_/n_,sy_/n_];};
+    return {p:low,tip:high,a:ex(-1),b:ex(1),wid,len:best.len,thick:best.thick};
+  }
+  const rect=({x0,y0,x1,y1})=>[[x0,y0],[x1,y0],[x1,y1],[x0,y1]];
+  function backlitNeedle(box,lum=(x,y)=>Y[Math.round(y)*w+Math.round(x)]){
+    const {x0,y0,x1,y1}=box,bw=x1-x0,bh=y1-y0;
+    let best=null;
+    for(const px of [.44,.47,.5,.53,.56]){
+      for(const py of [.82,.88,.94]){
+        const p=[x0+bw*px,y0+bh*py];
+        for(let deg=-151;deg<=-29;deg+=1.5){
+          const a=deg*Math.PI/180,ux=Math.cos(a),uy=Math.sin(a),len=bh*.58/Math.max(.57,-uy);
+          let sum=0,good=0;
+          for(let j=3;j<17;j++){
+            const x=p[0]+ux*len*j/17,y=p[1]+uy*len*j/17,off=2;
+            if(x<x0+3||x>x1-3||y<y0+3||y>y1-3)continue;
+            const contrast=(lum(x-uy*off,y+ux*off)+lum(x+uy*off,y-ux*off))/2-lum(x,y);
+            if(contrast>.085){good++;sum+=contrast;}
+          }
+          const score=sum*(good/14);
+          if(good>=10&&(!best||score>best.score))best={score,p,ux,uy,len};
+        }
+      }
+    }
+    if(!best)return null;
+    const {p,ux,uy,len}=best;
+    return {p,tip:[p[0]+ux*len,p[1]+uy*len],a:[x0+bw*.16,y0+bh*.39],b:[x0+bw*.84,y0+bh*.39],wid:2,color:'#201b16'};
   }
 
   /* ---- VU windows: big amber glows */
   const amb=new Uint8Array(N);
-  for(let i=0;i<N;i++)if((H[i]>=18&&H[i]<=50||H[i]<18||H[i]>340)&&S[i]>.55&&V[i]>.28)amb[i]=1;
+  for(let i=0;i<N;i++)if((H[i]<64||H[i]>340)&&S[i]>.23&&V[i]>.45)amb[i]=1;
   const cand=[];
   for(const c of comps(amb,3)){
-    const bb=bbox(c.all),bw=bb.x1-bb.x0,bh=bb.y1-bb.y0;
-    if(bw<w*.1||bh<h*.015||bw/Math.max(1,bh)<1||bw/Math.max(1,bh)>4)continue;
+    const bb=bbox(c.idx),bw=bb.x1-bb.x0,bh=bb.y1-bb.y0;
+    if(bw<w*.075||bh<h*.015||bw/Math.max(1,bh)<1.15||bw/Math.max(1,bh)>5)continue;
     /* a lit VU face is a solid, bright amber rectangle: reject ragged or dim amber areas (floor, wood, reflections) */
     const bo=bbox(c.idx),fill=c.idx.length/((bo.x1-bo.x0+1)*(bo.y1-bo.y0+1));
     let mv=0;for(const p of c.idx)mv+=V[p];mv/=Math.max(1,c.idx.length);
@@ -1123,41 +1535,93 @@ function detectRack(img){
     cand.push({n:c.idx.length,all:c.all,bb});
   }
   cand.sort((a,b)=>b.n-a.n);
-  if(cand.length>=2){
-    const keep=cand.filter(c=>c.n>=cand[0].n*.3).slice(0,6).sort((a,b)=>a.bb.x0-b.bb.x0);
-    res.vus=keep.map(c=>{
-      let tl=null,tr=null,br=null,bl=null,a=1e9,b=-1e9,cc=-1e9,d=1e9;
-      for(const p of c.all){const x=p%w,y=(p-x)/w;
-        if(x+y<a){a=x+y;tl=[x,y];}if(x-y>b){b=x-y;tr=[x,y];}if(x+y>cc){cc=x+y;br=[x,y];}if(x-y<d){d=x-y;bl=[x,y];}}
-      const q=[tl,tr,br,bl],mx=q.reduce((a,p)=>a+p[0],0)/4,my=q.reduce((a,p)=>a+p[1],0)/4;
-      return q.map(p=>[(mx+(p[0]-mx)*1.06)*inv,(my+(p[1]-my)*1.06)*inv]);
-    });
-    res.vu=res.vus.slice(0,2);
+  const blue=new Uint8Array(N);
+  for(let i=0;i<N;i++)if(H[i]>=172&&H[i]<=229&&S[i]>.5&&V[i]>.52&&Y[i]>.18)blue[i]=1;
+  const blueMeters=[];
+  for(const c of comps(blue,1)){
+    const box=bbox(c.idx),{x0,y0,x1,y1}=box,bw=x1-x0+1,bh=y1-y0+1;
+    if(bw<w*.075||bh<h*.05||bw/bh<.9||bw/bh>4.8||c.idx.length/(bw*bh)<.47)continue;
+    const top=new Float32Array(bw).fill(Infinity),bottom=new Float32Array(bw).fill(-Infinity);
+    for(const i of c.idx){
+      const x=i%w-x0,y=Math.floor(i/w);
+      top[x]=Math.min(top[x],y);bottom[x]=Math.max(bottom[x],y);
+    }
+    const points=[];
+    for(let x=Math.ceil(bw*.08);x<bw*.92;x++)if(bottom[x]-top[x]>=bh*.4)points.push([x,top[x],bottom[x]]);
+    if(points.length<bw*.68)continue;
+    const fit=k=>{
+      const mx=points.reduce((a,p)=>a+p[0],0)/points.length,my=points.reduce((a,p)=>a+p[k],0)/points.length;
+      let xy=0,xx=0;
+      for(const p of points){xy+=(p[0]-mx)*(p[k]-my);xx+=(p[0]-mx)**2;}
+      const slope=xy/xx,at=x=>my+slope*(x-mx);
+      return {at,error:points.reduce((a,p)=>a+Math.abs(p[k]-at(p[0])),0)/points.length};
+    };
+    const upper=fit(1),lower=fit(2);
+    if(Math.max(upper.error,lower.error)>bh*.075)continue;
+    const quad=[[x0,upper.at(0)],[x1,upper.at(bw-1)],[x1,lower.at(bw-1)],[x0,lower.at(0)]];
+    if(!validQuad(quad))continue;
+    const map=homo(quad),data=new Float32Array(bw*bh);
+    const project=([x,y])=>map(x/(bw-1),y/(bh-1));
+    for(let y=0;y<bh;y++)for(let x=0;x<bw;x++){
+      const [px,py]=project([x,y]);
+      data[y*bw+x]=Y[clamp(Math.round(py),0,h-1)*w+clamp(Math.round(px),0,w-1)];
+    }
+    const line=backlitNeedle({x0:0,y0:0,x1:bw-1,y1:bh-1},(x,y)=>data[Math.round(y)*bw+Math.round(x)]);
+    const n=line?{...line,p:project(line.p),tip:project(line.tip),a:project(line.a),b:project(line.b),color:'#10364a'}:null;
+    blueMeters.push({box,quad,n});
   }
+  const bluePair=blueMeters.filter(m=>m.n||blueMeters.some(other=>{
+    if(m===other||boxesOverlap(m.box,other.box))return false;
+    const a=m.box,b=other.box,ah=a.y1-a.y0,bh=b.y1-b.y0;
+    return Math.abs((a.y0+a.y1-b.y0-b.y1)/2)<Math.max(ah,bh)*.95&&Math.min(ah,bh)>Math.max(ah,bh)*.49;
+  }));
+  const meters=bluePair.slice();
+  for(const {bb} of (bluePair.length>=2?[]:cand.slice(0,12))){
+    const n=backlitNeedle(bb);
+    if(n&&!meters.some(m=>boxesOverlap(m.box,bb)))meters.push({box:bb,n});
+  }
+  for(const c of (bluePair.length>=2?[]:vuB)){
+    if(meters.some(m=>boxesOverlap(m.box,c.bo)))continue;
+    const n=findNeedle(c.bo,c.idx);
+    if(!n||n.thick>9)continue;
+    const {x0,y0,x1,y1}=c.bo,mx=(x1-x0)*.09,my=(y1-y0)*.15;
+    meters.push({box:{x0:x0-mx,x1:x1+mx,y0:y0-my,y1:y1+my},n});
+  }
+  meters.sort((a,b)=>a.box.x0-b.box.x0);
+  const keptMeters=meters.slice(0,6);
+  res.vus=keptMeters.map(m=>(m.quad||rect(m.box)).map(p=>p.map(v=>v*inv)));
+  res.needles=keptMeters.map(({n})=>n?({
+    p:n.p.map(v=>v*inv),tip:n.tip.map(v=>v*inv),a:n.a.map(v=>v*inv),b:n.b.map(v=>v*inv),wid:n.wid*inv,color:n.color
+  }):null);
 
   /* ---- speaker: strongest circle (gradient Hough) */
   const sm=2,gw=Math.floor(w/sm),gh=Math.floor(h/sm),GN=gw*gh,gy=new Float32Array(GN);
   for(let y=0;y<gh;y++)for(let x=0;x<gw;x++){let s=0;for(let dy=0;dy<sm;dy++)for(let dx=0;dx<sm;dx++)s+=Y[(y*sm+dy)*w+x*sm+dx];gy[y*gw+x]=s/(sm*sm);}
+  const enclosed=[res._barsBox,...keptMeters.map(m=>m.box)].filter(Boolean);
+  const covered=(x,y)=>enclosed.some(b=>x>=b.x0-2&&x<=b.x1+2&&y>=b.y0-2&&y<=b.y1+2);
   const ex=[],ey=[],ed=[],mags=[];
   for(let y=1;y<gh-1;y++)for(let x=1;x<gw-1;x++){
+    if(covered(x*sm,y*sm))continue;
     const i=y*gw+x;
     const gxv=(gy[i+1-gw]+2*gy[i+1]+gy[i+1+gw])-(gy[i-1-gw]+2*gy[i-1]+gy[i-1+gw]);
     const gyv=(gy[i+gw-1]+2*gy[i+gw]+gy[i+gw+1])-(gy[i-gw-1]+2*gy[i-gw]+gy[i-gw+1]);
     const m=Math.hypot(gxv,gyv);if(m>0){ex.push(x);ey.push(y);ed.push([gxv/m,gyv/m]);mags.push(m);}
   }
-  const sorted=Float32Array.from(mags).sort(),thr=sorted[Math.floor(sorted.length*.9)]||0;
-  const rmin=Math.round(w*.03/sm),rmax=Math.round(w*.2/sm);
+  const sorted=Float32Array.from(mags).sort(),thr=sorted[Math.floor(sorted.length*.86)]||0;
+  const rmin=Math.max(5,Math.round(Math.min(w,h)*.04/sm)),rmax=Math.round(Math.min(w,h)*.47/sm);
   let bs=0,bc=null;const cands=[];const acc=new Float32Array(GN);
   for(let r=rmin;r<=rmax;r++){
     acc.fill(0);
-    for(let k=0;k<ex.length;k++){if(mags[k]<thr)continue;
+    for(let k=0;k<ex.length;k++){if(mags[k]<Math.max(.07,Math.min(.34,thr)))continue;
       for(const sg of[1,-1]){const cx=Math.round(ex[k]+sg*r*ed[k][0]),cy=Math.round(ey[k]+sg*r*ed[k][1]);
         if(cx>=0&&cx<gw&&cy>=0&&cy<gh)acc[cy*gw+cx]++;}}
     for(let y=1;y<gh-1;y++)for(let x=1;x<gw-1;x++){
       const i=y*gw+x;const v=(acc[i]*2+acc[i-1]+acc[i+1]+acc[i-gw]+acc[i+gw])/(2*Math.PI*r*2);
       const score=v*Math.pow(r,.9);
       if(score>bs){bs=score;bc=[x*sm,y*sm,r*sm];}
-      if(score>1.2)cands.push([score,x*sm,y*sm,r*sm]);
+      if(score>.18&&acc[i]>=acc[i-1]&&acc[i]>=acc[i+1]&&acc[i]>=acc[i-gw]&&acc[i]>=acc[i+gw]){
+        if(!covered(x*sm,y*sm))cands.push([score,x*sm,y*sm,r*sm]);
+      }
     }
   }
   /* judge the strongest candidates: a real driver is a closed ring (edges all the way round) with a dust cap / inner ring,
@@ -1170,14 +1634,12 @@ function detectRack(img){
       let m=0;for(let d=-2;d<=2;d++){const v=Math.abs(bil(x+cx*(r+d+2),y+cy*(r+d+2))-bil(x+cx*(r+d-2),y+cy*(r+d-2)));if(v>m)m=v;}
       s+=m;n++;if(m>.05)hit++;}
     return n<TT*.4?{mean:0,cov:0}:{mean:s/n,cov:hit/n};};
-  const avoid=[];
-  if(res._barsBox)avoid.push(res._barsBox);
-  for(const c of cand.slice(0,2))avoid.push(c.bb);
+  const avoid=enclosed;
   if(bc){
-    const ok=cands.filter(c=>c[0]>=.3*bs).sort((a,b)=>b[0]-a[0]);
+    const ok=cands.filter(c=>c[0]>=.17*bs).sort((a,b)=>b[0]-a[0]);
     const kept=[];
     for(const c of ok){
-      if(kept.length>=50)break;
+      if(kept.length>=85)break;
       if(kept.some(k=>Math.hypot(k[1]-c[1],k[2]-c[2])<Math.min(k[3],c[3])*.5&&Math.abs(k[3]-c[3])<Math.max(k[3],c[3])*.25))continue;
       kept.push(c);
     }
@@ -1190,16 +1652,36 @@ function detectRack(img){
       /* a driver never swallows the VU windows or the spectrum display, and a real one has an inner ring (dust cap) */
       if(avoid.some(b=>Math.hypot((b.x0+b.x1)/2-x,(b.y0+b.y1)/2-y)<r*.95))f*=.15;
       if(inner<=0)f*=.5;
-      return{c,f,cov:rim.cov,inner};});
-    scored.sort((a,b)=>b.f-a.f);
-    res._spkDbg=scored.slice(0,14).map(o=>[Math.round(o.c[1]),Math.round(o.c[2]),Math.round(o.c[3]),+o.f.toFixed(2),+o.cov.toFixed(2),+o.inner.toFixed(3)]);
-    const top=scored[0];
+      let dark=0,neutral=0,seen=0;
+      for(const [dx,dy] of cs0){
+        const px=Math.round(x+dx*r*1.32),py=Math.round(y+dy*r*1.32);
+        if(px<0||px>=w||py<0||py>=h)continue;
+        const i=py*w+px;seen++;
+        if(Y[i]<.29)dark++;
+        if(S[i]<.44)neutral++;
+      }
+      return{c,f,cov:rim.cov,inner,cabinet:seen>=TT*.65&&dark>=seen*.78&&neutral>=seen*.62};});
+    const credible=scored.filter(o=>{
+      const [,x,y,r]=o.c;
+      if(o.cov<.73||o.inner<.04||!o.cabinet||r<Math.min(w,h)*.072)return false;
+      if(avoid.some(b=>Math.hypot((b.x0+b.x1)/2-x,(b.y0+b.y1)/2-y)<r*1.32))return false;
+      if(keptMeters.length>=2){
+        const boxes=keptMeters.map(m=>m.box);
+        const left=Math.min(...boxes.map(b=>b.x0)),right=Math.max(...boxes.map(b=>b.x1));
+        const top=Math.min(...boxes.map(b=>b.y0)),bottom=Math.max(...boxes.map(b=>b.y1));
+        if(x>=left-r*.6&&x<=right+r*.6&&y>=top&&y<=bottom+1.42*(bottom-top)&&2*r<(right-left)*.34)return false;
+      }
+      return true;
+    });
+    credible.sort((a,b)=>b.f-a.f);
+    if(!credible.length)return res;
+    const top=credible[0];
     let pick=top;
-    for(const o of scored){if(o.f>=.45*top.f&&o.c[3]>pick.c[3]*1.04&&Math.hypot(o.c[1]-top.c[1],o.c[2]-top.c[2])<top.c[3]*.35)pick=o;}
+    for(const o of credible){if(o.f>=.45*top.f&&o.c[3]>pick.c[3]*1.04&&Math.hypot(o.c[1]-top.c[1],o.c[2]-top.c[2])<top.c[3]*.35)pick=o;}
     bc=[pick.c[1],pick.c[2],pick.c[3]];
     /* more drivers of the same size (tower with several woofers, a left + right pair) */
     const more=[[pick.c[1],pick.c[2],pick.c[3]]];
-    for(const o of scored){
+    for(const o of credible){
       if(more.length>=6)break;
       const [x,y,r]=o.c.slice(1);
       if(o.f<.3*top.f||o.cov<.8||o.inner<=0)continue;
@@ -1225,25 +1707,84 @@ function detectRack(img){
     res.spk=[bc[0]*inv,bc[1]*inv,bc[2]*inv];
     res.spks=[res.spk].concat((res._more||[]).slice(1).map(m=>[m[0]*inv,m[1]*inv,m[2]*inv]));
   }
-  res._score=bs;
   return res;
 }
 
-function autoFind(){
-  if(!img){$('autoMsg').hidden=false;$('autoMsg').textContent=t('먼저 배경 이미지를 선택하세요.');return;}
-  const r=detectRack(img),[lw,lh]=SIZES[O.size];
-  const iw=img.width,ih=img.height,sc=Math.max(lw/iw,lh/ih),dw=iw*sc,dh=ih*sc,ox=-(dw-lw)*O.offset,oy=-(dh-lh)*O.offset;
-  const map=p=>[clamp(p[0]*sc+ox,0,lw),clamp(p[1]*sc+oy,0,lh)];
-  const found=[];
-  if(r.bars){O.quad=r.bars.map(map);found.push(t('막대'));}
-  if(r.vus&&r.vus.length>=2){const f=fxNow();f.vl=r.vus[0].map(map);f.vr=r.vus[1].map(map);f.vx=r.vus.slice(2).map(q=>q.map(map));found.push(r.vus.length===2?t('VU 2개'):'VU ×'+r.vus.length);}
-  if(r.spks&&r.spks.length){const f=fxNow(),L=r.spks.map(q=>{const c=map([q[0],q[1]]);return [c[0],c[1],Math.max(20,q[2]*sc)];});f.sp=L[0];f.sx=L.slice(1);found.push(t('스피커')+(L.length>1?' ×'+L.length:''));}
-  const m=$('autoMsg');m.hidden=false;
-  m.textContent=found.length?(t('찾은 것: ')+found.join(', ')+t('. 위치가 조금 어긋나면 점을 끌어 고치세요.')+(r.bars&&r.vus&&r.vus.length>=2&&r.spks&&r.spks.length?'':t(' (못 찾은 항목은 직접 맞추세요)'))):t('찾지 못했습니다. 직접 점을 끌어 맞추세요.');
-  if(r.bars)$('chkBars').checked=O.showBars=true;
-  if(r.vus&&r.vus.length>=2)$('chkVu').checked=O.vu=true;
-  if(r.spks&&r.spks.length)$('chkSpk').checked=O.spk=true;
+function reframe(change){
+  if(!img){change();return;}
+  const previousSize=O.size;
+  const before=photoPlacement(img,...SIZES[O.size],O.offset,O.photoFit);
+  change();
+  if(O.general){if(O.size!==previousSize)O.quad=null;return;}
+  const after=photoPlacement(img,...SIZES[O.size],O.offset,O.photoFit),scale=after.scale/before.scale;
+  const point=([x,y])=>[(x-before.x)*scale+after.x,(y-before.y)*scale+after.y];
+  const quad=q=>q?q.map(point):null;
+  const speaker=s=>s?[...point(s),s[2]*scale]:null;
+  O.quad=quad(O.quad);
+  if(O.fx){
+    const f=O.fx;
+    f.vl=quad(f.vl);f.vr=quad(f.vr);f.vx=f.vx?.map(quad);
+    f.sp=speaker(f.sp);f.sx=f.sx?.map(speaker);
+  }
+}
+function useGeneralPhoto(message){
+  O.general=true;O.quad=null;O.fx=null;
+  $('chkBars').checked=O.showBars=true;
+  $('chkVu').checked=O.vu=false;
+  $('chkSpk').checked=O.spk=false;
+  message.textContent=t('일반 사진에 음악 스펙트럼을 추가했습니다.');
   rebuild();
+}
+function autoFind(){
+  if(busy)return;
+  const m=$('autoMsg');m.hidden=false;
+  if(!img){m.textContent=t('먼저 배경 이미지를 선택하세요.');return;}
+  if(backgroundVideo||O.background==='photo'){useGeneralPhoto(m);if(backgroundVideo)m.textContent=t('배경 동영상은 음악 길이에 맞춰 반복 재생됩니다.');return;}
+  try{
+    const r=detectRack(img);
+    if(O.background==='auto'&&!r.bars&&!r.vus?.length&&!r.spks?.length){useGeneralPhoto(m);return;}
+    O.general=false;
+    const p=photoPlacement(img,...SIZES[O.size],O.offset,O.photoFit);
+    const map=([x,y])=>[x*p.scale+p.x,y*p.scale+p.y];
+    const meters=(r.vus||[]).map(q=>q.map(map));
+    const found=[];
+    O.quad=r.bars?.map(map)||null;
+    $('chkBars').checked=O.showBars=!!O.quad;
+    if(O.showBars){
+      found.push(t('막대'));
+      if(r.barCount&&r.barCount!==O.bars){
+        $('rngBars').value=r.barCount;$('rngBars').dispatchEvent(new Event('input'));
+      }
+    }
+    const f=O.fx=defaultFx(O.size);
+    if(meters.length){
+      f.vl=meters[0];f.vr=meters[1]||null;f.vx=meters.slice(2);
+      f.vn=r.needles.map((n,i)=>{
+        if(!n)return {needsTip:true,color:"#10364a"};
+        const q=meters[i],width=Math.hypot(q[1][0]-q[0][0],q[1][1]-q[0][1]);
+        const local=point=>toQuad(q,map(point)).map(v=>clamp(v,0,1));
+        return {p:local(n.p),a:local(n.a),b:local(n.b),tip:local(n.tip),color:n.color,width:clamp(n.wid*p.scale/width,.003,.022)};
+      });
+      const pending=f.vn.filter(n=>n.needsTip).length;
+      found.push('VU ×'+meters.length+(pending?(' · '+({ko:'정렬 보기에서 흰 점을 기존 바늘 끝에 맞추세요',ja:'白い点を元の針先に合わせてください',zh:'将白点拖到原指针尖端',es:'Ajusta el punto blanco a la punta de la aguja'}[LANG]||'Align the white handle to the existing needle tip')+' ×'+pending):''));
+      O.vuReal=true;O.vuStyle='real';$('selVuStyle').value='real';
+    }
+    $('chkVu').checked=O.vu=!!meters.length;
+    if(r.spks?.length){
+      const sp=r.spks.map(s=>[...map(s),s[2]*p.scale]);
+      f.sp=sp[0];f.sx=sp.slice(1);
+      found.push(t('스피커')+' ×'+sp.length);
+    }
+    $('chkSpk').checked=O.spk=!!r.spks?.length;
+    const complete=O.showBars&&O.vu&&O.spk;
+    m.textContent=found.length?(t('찾은 것: ')+found.join(', ')+t('. 위치가 조금 어긋나면 점을 끌어 고치세요.')+(complete?'':t(' (못 찾은 항목은 직접 맞추세요)'))):t('찾지 못했습니다. 직접 점을 끌어 맞추세요.');
+    rebuild();
+  }catch(error){
+    console.warn('Photo detection failed',error);
+    if(O.background==='auto'){useGeneralPhoto(m);return;}
+    m.textContent=t('찾지 못했습니다. 직접 점을 끌어 맞추세요.');
+    rebuild();
+  }
 }
 $('btnAuto').onclick=autoFind;
 $('btnSpkAdd').onclick=()=>{
@@ -1263,54 +1804,140 @@ function range(id,out,fmt,cb){
   el.addEventListener('change',()=>{schedule();});
   o.textContent=fmt(+el.value);
 }
-let anaT=0;
+let anaT=0,analysisRequest=0,imageRequest=0,audioRequest=0;
 range('rngBars','vBars',v=>v,v=>{O.bars=v;schedule();clearTimeout(anaT);anaT=setTimeout(runAnalysis,400);});
-range('rngOff','vOff',v=>v+'%',v=>{O.offset=v/100;schedule();});
+range('rngOff','vOff',v=>v+'%',v=>{reframe(()=>{O.offset=v/100;});schedule();});
 range('rngPos','vPos',v=>v+'%',v=>{O.pos=v/100;schedule();});
 range('rngShade','vShade',v=>v+'%',v=>{O.shade=v/100;schedule();});
 range('rngSpk','vSpk',v=>v+'%',v=>{O.spkAmt=v/100;schedule();});
 range('rngScale','vScale',v=>v+'%',v=>{O.scale=v/100;schedule();});
 const bindSel=(id,cb)=>$(id).addEventListener('change',e=>{cb(e.target.value);schedule();});
 const bindChk=(id,cb)=>$(id).addEventListener('change',e=>{cb(e.target.checked);schedule();});
-bindSel('selSize',v=>{O.size=v;O.quad=null;O.fx=null;O.pos=defaultPos(O.style,v);$('rngPos').value=Math.round(O.pos*100);$('vPos').textContent=Math.round(O.pos*100)+'%';rebuild();});
+bindSel('selSize',v=>{reframe(()=>{O.size=v;});O.pos=defaultPos(O.style,v);$('rngPos').value=Math.round(O.pos*100);$('vPos').textContent=Math.round(O.pos*100)+'%';rebuild();});
+bindSel('selBackground',v=>{O.background=v;if(img)autoFind();});
+bindChk('chkMotion',v=>{O.motion=v;});
+bindSel('selPhotoMotion',v=>{O.photoMotion=v;});
+range('rngMotion','vMotion',v=>v+'%',v=>{O.motionPower=v/100;schedule();});
 bindSel('selPalette',v=>{O.palette=+v;if(O.palette===4&&O.bars<20){const r=$('rngBars');r.value=24;r.dispatchEvent(new Event('input'));}});
 bindSel('selStyle',v=>{O.style=v;O.pos=defaultPos(v,O.size);$('rngPos').value=Math.round(O.pos*100);$('vPos').textContent=Math.round(O.pos*100)+'%';});
-bindSel('selFont',v=>{O.font=+v;});
+let fontSheet;
+async function loadCaptionFont(index){
+  const font=FONTS[index];
+  if(!font.web||!document.fonts)return;
+  fontSheet??=new Promise(resolve=>{
+    const link=document.createElement('link');
+    link.rel='stylesheet';
+    const families=FONTS.filter(f=>f.web).map(f=>'family='+f.web.replaceAll(' ','+')+(f.w==='400'?'':':wght@'+f.w));
+    link.href='https://fonts.googleapis.com/css2?'+families.sort().join('&')+'&display=swap';
+    const timeout=setTimeout(resolve,3500);
+    link.onload=link.onerror=()=>{clearTimeout(timeout);resolve();};
+    document.head.append(link);
+  });
+  await fontSheet;
+  const sample=[title,...lines.map(line=>line.t),'한글 자막 Lyrics'].join(' ');
+  let timeout;
+  try{
+    await Promise.race([document.fonts.load(font.w+' 32px "'+font.web+'"',sample),new Promise(resolve=>{timeout=setTimeout(resolve,4000);})]);
+  }catch(error){console.warn('Caption font unavailable',error);}finally{clearTimeout(timeout);}
+}
+bindSel('selFont',v=>{
+  O.font=+v;
+  loadCaptionFont(O.font).then(()=>{if(O.font===+v&&!busy)rebuild();});
+});
 bindSel('selColor',v=>{O.color=v;});
+bindChk('chkFit',v=>{reframe(()=>{O.photoFit=v;});});
 bindChk('chkErase',v=>{O.erase=v;});bindChk('chkFlash',v=>{O.flash=v;});
 bindChk('chkTitle',v=>{O.title=v;});bindChk('chkSection',v=>{O.section=v;});bindChk('chkProg',v=>{O.progress=v;});
-bindChk('chkFast',v=>{O.fast=v;});bindChk('chkBars',v=>{O.showBars=v;});bindChk('chkVu',v=>{O.vu=v;});bindChk('chkSpk',v=>{O.spk=v;});bindChk('chkGuide',v=>{O.guide=v;});
+bindChk('chkFast',v=>{O.fast=v;});bindChk('chkBars',v=>{O.showBars=v;});bindChk('chkVu',v=>{O.vu=v;});bindSel('selVuStyle',v=>{O.vuStyle=v;O.vuReal=(v==='real');});
+$('inVuCol').addEventListener('input',e=>{O.vuCol=e.target.value;schedule();});
+$('btnVuColAuto').onclick=()=>{O.vuCol=null;schedule();};bindChk('chkSpk',v=>{O.spk=v;});bindChk('chkGuide',v=>{O.guide=v;});
 $('txtHot').addEventListener('input',e=>{O.hot=e.target.value;schedule();});
 O.pos=defaultPos(O.style,O.size);
 
 /* ---------------------------------------------------------------- files */
+let backgroundVideo=null;
 const cleanName=n=>n.replace(/\.[^.]+$/,'').replace(/_/g,' ').trim();
 async function loadImage(file){
   const im=new Image();const url=URL.createObjectURL(file);im.src=url;
-  await im.decode();
+  try{await im.decode();}finally{URL.revokeObjectURL(url);}
   const s=Math.min(1,2400/Math.max(im.naturalWidth,im.naturalHeight));
   const c=document.createElement('canvas');c.width=Math.round(im.naturalWidth*s);c.height=Math.round(im.naturalHeight*s);
-  c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);return c;
+  c.getContext('2d').drawImage(im,0,0,c.width,c.height);return c;
+}
+function releaseVideo(video){
+  if(!video)return;
+  video.pause();URL.revokeObjectURL(video.src);video.removeAttribute('src');video.load();
+}
+function mediaEvent(video,name,timeout=5000){
+  return new Promise((resolve,reject)=>{
+    const clean=()=>{clearTimeout(timer);video.removeEventListener(name,ok);video.removeEventListener('error',fail);};
+    const ok=()=>{clean();resolve();};
+    const fail=()=>{clean();reject(new Error(t('동영상을 읽을 수 없습니다.')));};
+    const timer=setTimeout(fail,timeout);
+    video.addEventListener(name,ok);video.addEventListener('error',fail);
+  });
+}
+async function openBackgroundVideo(file){
+  const video=document.createElement('video');video.muted=true;video.loop=true;video.playsInline=true;video.preload='auto';
+  const ready=mediaEvent(video,'loadeddata');
+  video.src=URL.createObjectURL(file);
+  try{
+    await ready;
+    if(!video.videoWidth||!Number.isFinite(video.duration)||video.duration<=0)throw new Error();
+    const poster=document.createElement('canvas');poster.width=video.videoWidth;poster.height=video.videoHeight;
+    poster.getContext('2d').drawImage(video,0,0);
+    return {video,poster};
+  }catch(error){releaseVideo(video);throw error;}
+}
+function backgroundTime(video,t){
+  return Math.min(Math.max(0,video.duration-.001),Math.max(0,t)%video.duration);
+}
+async function seekBackground(video,t){
+  const target=backgroundTime(video,t);
+  if(!video.seeking&&Math.abs(video.currentTime-target)<.001)return;
+  const ready=mediaEvent(video,'seeked');
+  video.currentTime=target;await ready;
+}
+function followBackground(video,t){
+  if(!video)return;
+  const target=backgroundTime(video,t);
+  if(!video.seeking&&Math.abs(video.currentTime-target)>.18)video.currentTime=target;
 }
 $('fImage').addEventListener('change',async e=>{
   const f=e.target.files[0];if(!f)return;
-  try{img=await loadImage(f);imgName=f.name;$('nImage').textContent=f.name;O.quad=null;O.fx=null;rebuild();updateReady();}
-  catch(err){$('nImage').textContent=t('이미지를 열 수 없습니다');}
+  const request=++imageRequest;
+  const isVideo=f.type.startsWith('video/')||/.(mp4|webm|mov|m4v)$/i.test(f.name);
+  try{
+    const media=isVideo?await openBackgroundVideo(f):{poster:await loadImage(f),video:null};
+    if(request!==imageRequest){releaseVideo(media.video);return;}
+    stopPlay();releaseVideo(backgroundVideo);
+    backgroundVideo=media.video;
+    if(backgroundVideo)backgroundVideo.addEventListener('seeked',()=>{if(!playing&&!busy)paint();});
+    img=media.poster;imgName=f.name;$('nImage').textContent=f.name;O.quad=null;O.fx=null;autoFind();updateReady();
+  }catch(err){if(request===imageRequest)$('nImage').textContent=isVideo?t('동영상을 읽을 수 없습니다.'):t('이미지를 열 수 없습니다');}
 });
+const audioChannels=()=>Array.from({length:Math.min(2,audioBuf.numberOfChannels)},(_,i)=>audioBuf.getChannelData(i));
 async function runAnalysis(){
-  if(!mono)return;
+  if(!mono||busy)return;
+  const request=++analysisRequest;
   const fps=24,nf=Math.ceil(dur*fps);
   status(t('소리 분석 중…'));
-  const myA=await analyze(mono,sr,fps,nf,O.bars,p=>setProg(p));
+  const active=()=>request===analysisRequest&&!busy;
+  const myA=await analyze(mono,sr,fps,nf,O.bars,p=>{if(active())setProg(p);},audioChannels(),active);
+  if(!myA||!active())return;
   A=myA;setProg(0);status(img?t('준비 완료'):t('배경 이미지를 선택하세요'));paint();updateReady();
 }
 $('fAudio').addEventListener('change',async e=>{
   const f=e.target.files[0];if(!f)return;
-  stopPlay();live=false;curT=0;
+  const request=++audioRequest;++analysisRequest;clearTimeout(anaT);
+  stopPlay();live=false;curT=0;A=null;audioBuf=null;mono=null;updateReady();
+  $('play').disabled=true;$('seek').disabled=true;
   status(t('음악 읽는 중…'));$('nAudio').textContent=f.name;
   try{
-    audioFile=f;audioRaw=await f.arrayBuffer();
-    audioBuf=await ac().decodeAudioData(audioRaw.slice(0));
+    const bytes=await f.arrayBuffer();
+    const decoded=await ac().decodeAudioData(bytes.slice(0));
+    if(request!==audioRequest)return;
+    audioFile=f;audioRaw=bytes;audioBuf=decoded;
     sr=audioBuf.sampleRate;dur=audioBuf.duration;
     const ch=audioBuf.numberOfChannels;mono=new Float32Array(audioBuf.length);
     for(let c=0;c<ch;c++){const d=audioBuf.getChannelData(c);for(let i=0;i<mono.length;i++)mono[i]+=d[i]/ch;}
@@ -1320,7 +1947,7 @@ $('fAudio').addEventListener('change',async e=>{
     $('play').disabled=false;$('seek').disabled=false;$('seek').value=0;
     loadLyrics();rebuild();
     await runAnalysis();
-  }catch(err){status(t('음악을 읽을 수 없습니다: ')+(err&&err.message?err.message:err));audioBuf=null;mono=null;updateReady();}
+  }catch(err){if(request!==audioRequest)return;status(t('음악을 읽을 수 없습니다: ')+(err&&err.message?err.message:err));audioBuf=null;mono=null;updateReady();}
 });
 $('fLyric').addEventListener('change',async e=>{
   const f=e.target.files[0];if(!f)return;
@@ -1352,12 +1979,14 @@ function updateReady(){$('btnRender').disabled=!(img&&mono)||busy;}
 
 /* ---------------------------------------------------------------- playback */
 function stopPlay(){
+  backgroundVideo?.pause();
   if(src){try{src.onended=null;src.stop();}catch(e){}src=null;}
   playing=false;cancelAnimationFrame(raf);$('transport').classList.remove('playing');
 }
 function playFrom(t){
-  if(!audioBuf)return;
-  stopPlay();const a=ac();if(a.state==='suspended')a.resume();
+  if(!audioBuf||busy)return;
+  stopPlay();
+  if(backgroundVideo){followBackground(backgroundVideo,t);backgroundVideo.play().catch(console.warn);}const a=ac();if(a.state==='suspended')a.resume();
   src=a.createBufferSource();src.buffer=audioBuf;src.connect(a.destination);
   src.start(0,t);startCtx=a.currentTime;startT=t;playing=true;live=true;
   $('transport').classList.add('playing');
@@ -1415,6 +2044,7 @@ async function encodeWebCodecs(an,sc,w,h,fps,nf){
   const cvs=document.createElement('canvas');cvs.width=w;cvs.height=h;const g=cvs.getContext('2d');
   for(let f=0;f<nf;f++){
     if(cancel)throw new Error('cancel');if(err)throw err;
+    if(backgroundVideo)await seekBackground(backgroundVideo,f/fps);
     sc.frame(g,f/fps,an.lvl[f],an.peak[f],an.kick[f],fxOf(an,f));
     const vf=new VideoFrame(cvs,{timestamp:Math.round(f*1e6/fps),duration:Math.round(1e6/fps)});
     venc.encode(vf,{keyFrame:f%(fps*2)===0});vf.close();
@@ -1439,10 +2069,11 @@ async function encodeWebCodecs(an,sc,w,h,fps,nf){
   return new Blob([muxer.target.buffer],{type:'video/mp4'});
 }
 async function encodeRecorder(an,sc,w,h,fps,nf){
-  const cands=['video/mp4;codecs=avc1.640028,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
+  const cands=['video/mp4;codecs=avc1.42001f,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];
   const mime=cands.find(m=>window.MediaRecorder&&MediaRecorder.isTypeSupported(m));
   if(!mime)throw new Error(t('이 브라우저는 영상 만들기를 지원하지 않습니다. 최신 Chrome 또는 Edge를 사용하세요.'));
   const cvs=document.createElement('canvas');cvs.width=w;cvs.height=h;const g=cvs.getContext('2d');
+  if(backgroundVideo)await seekBackground(backgroundVideo,0);
   sc.frame(g,0,an.lvl[0],an.peak[0],an.kick[0],fxOf(an,0));
   const a=ac();if(a.state==='suspended')await a.resume();
   const stream=cvs.captureStream(fps),dest=a.createMediaStreamDestination(),bs=a.createBufferSource();
@@ -1450,12 +2081,14 @@ async function encodeRecorder(an,sc,w,h,fps,nf){
   const chunks=[];const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:O.fast?4e6:8e6,audioBitsPerSecond:192000});
   rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
   const done=new Promise(r=>{rec.onstop=r;});
+  if(backgroundVideo)await backgroundVideo.play();
   rec.start(500);bs.start();const t0=a.currentTime;
   await new Promise((res,rej)=>{
     const iv=setInterval(()=>{
       const tt=a.currentTime-t0;
       if(cancel){clearInterval(iv);rej(new Error('cancel'));return;}
       if(tt>=dur){clearInterval(iv);res();return;}
+      followBackground(backgroundVideo,tt);
       const f=clamp(Math.floor(tt*fps),0,nf-1);
       sc.frame(g,f/fps,an.lvl[f],an.peak[f],an.kick[f],fxOf(an,f));
       setProg(.15+.8*tt/dur);status(t('영상 만드는 중 (실시간)… ')+Math.round(tt/dur*100)+'%');
@@ -1467,6 +2100,7 @@ async function encodeRecorder(an,sc,w,h,fps,nf){
 }
 async function render(){
   if(busy||!img||!mono)return;
+  stopPlay();
   busy=true;cancel=false;resultBlob=null;$('btnSave').hidden=true;
   $('btnRender').disabled=true;$('btnCancel').disabled=false;stopPlay();
   document.querySelectorAll('.ctrl input,.ctrl select,.ctrl button').forEach(el=>{if(el.id!=='btnCancel')el.disabled=true;});
@@ -1474,12 +2108,16 @@ async function render(){
   try{
     const fps=O.fast?24:30,k=O.fast?2/3:1,[lw,lh]=SIZES[O.size],w=even(lw*k),h=even(lh*k),nf=Math.ceil(dur*fps);
     status(t('소리 분석 중…'));setProg(0);
-    const an=(A&&A.fps===fps&&A.bands===O.bars&&A.nf===nf)?A:await analyze(mono,sr,fps,nf,O.bars,p=>setProg(p*.15));
+    const an=(A&&A.fps===fps&&A.bands===O.bars&&A.nf===nf)?A:await analyze(mono,sr,fps,nf,O.bars,p=>setProg(p*.15),audioChannels(),()=>!cancel);
+    if(!an||cancel)throw new Error('cancel');
     setProg(.15);
-    const sc=makeScene(O,w,h,img,lines,marks,title,dur);
+    await loadCaptionFont(O.font);
+    if(cancel)throw new Error('cancel');
+    const sc=makeScene(O,w,h,img,lines,marks,title,dur,backgroundVideo);
     let blob=null;
     const hasWC=typeof VideoEncoder==='function'&&typeof AudioEncoder==='function'&&typeof VideoFrame==='function'&&typeof AudioData==='function';
-    if(hasWC&&await ensureMuxer()){
+    const directMp4=window.MediaRecorder&&MediaRecorder.isTypeSupported('video/mp4');
+    if(hasWC&&(!directMp4||(!backgroundVideo&&window.Mp4Muxer))&&await ensureMuxer()){
       try{blob=await encodeWebCodecs(an,sc,w,h,fps,nf);}
       catch(e){if(e&&e.message==='cancel')throw e;console.warn('WebCodecs path failed',e);status(t('빠른 방식을 쓸 수 없어 실시간 방식으로 만듭니다…'));}
     }
@@ -1493,6 +2131,7 @@ async function render(){
     if(e&&e.message==='cancel'){status(t('취소되었습니다'));setProg(0);}
     else{status(t('실패: ')+(e&&e.message?e.message:e));}
   }finally{
+    backgroundVideo?.pause();
     busy=false;$('btnCancel').disabled=true;
     document.querySelectorAll('.ctrl input,.ctrl select,.ctrl button').forEach(el=>{if(el.id!=='btnCancel'&&el.id!=='btnRender')el.disabled=false;});
     updateReady();if(wake){try{wake.release();}catch(e){}}
