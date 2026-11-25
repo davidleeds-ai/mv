@@ -2159,3 +2159,92 @@ window.__svm={O,get A(){return A;},get lines(){return lines;},rebuild,render,get
 })();
 initLang();
 </script>
+<style>
+#gate{position:fixed;inset:0;z-index:99999;background:#0b0e12;display:flex;align-items:center;justify-content:center;padding:16px}
+#gate[hidden],#gateBadge[hidden]{display:none!important}
+#gate .gbox{width:min(520px,100%);background:#151a21;border:1px solid #2a323d;border-radius:14px;padding:24px;color:#e8edf3;font:15px/1.5 system-ui,'Noto Sans KR',sans-serif}
+#gate h2{margin:0 0 6px;font-size:22px}
+#gate p{margin:0 0 14px;color:#9fb0c3}
+#gate textarea{width:100%;box-sizing:border-box;background:#0b0e12;color:#e8edf3;border:1px solid #2a323d;border-radius:8px;padding:10px;font:13px/1.4 ui-monospace,monospace;resize:vertical}
+#gate button{margin-top:12px;width:100%;padding:12px;border:0;border-radius:8px;background:#21deff;color:#06222b;font:700 16px system-ui,sans-serif;cursor:pointer}
+#gateErr{margin-top:10px;color:#ff7a7a;min-height:1.4em}
+#gateBadge{position:fixed;right:10px;bottom:10px;z-index:9000;background:rgba(21,26,33,.92);color:#cfe3f3;border:1px solid #2a323d;border-radius:999px;padding:5px 6px 5px 12px;font:12px system-ui,sans-serif}
+#gateBadge button{margin-left:6px;border:0;border-radius:999px;padding:3px 10px;background:#2a323d;color:#e8edf3;cursor:pointer;font:12px system-ui,sans-serif}
+body:not(.svm-ok)>*:not(#gate):not(#gateBadge):not(script):not(style){visibility:hidden}
+</style>
+<div id="gate">
+  <div class="gbox">
+    <h2>접근 코드 입력</h2>
+    <p>구독자에게 받은 접근 코드를 붙여 넣으세요.</p>
+    <textarea id="gateCode" rows="4" spellcheck="false" autocomplete="off"></textarea>
+    <button type="button" id="gateGo">입장</button>
+    <div id="gateErr" role="alert"></div>
+  </div>
+</div>
+<div id="gateBadge" hidden><span id="gateExp"></span> <button type="button" id="gateOut">로그아웃</button></div>
+<script>
+Object.entries({"en": {"접근 코드 입력": "Enter access code", "구독자에게 받은 접근 코드를 붙여 넣으세요.": "Paste the access code you received.", "입장": "Enter", "로그아웃": "Log out", "만료: ": "Expires: ", "접근 코드가 올바르지 않습니다.": "That access code is not valid.", "이 코드는 취소되었습니다.": "This code has been revoked.", "이 코드는 만료되었습니다.": "This code has expired.", "이 브라우저에서는 코드를 확인할 수 없습니다. 최신 Chrome/Edge 에서 https 주소로 열어 주세요.": "This browser cannot verify codes. Open the https address in a recent Chrome/Edge.", "로그인 설정(access-config.js)이 없어 잠겨 있습니다.": "Locked: the login settings (access-config.js) are missing."}, "ja": {"접근 코드 입력": "アクセスコードを入力", "구독자에게 받은 접근 코드를 붙여 넣으세요.": "受け取ったアクセスコードを貼り付けてください。", "입장": "入る", "로그아웃": "ログアウト", "만료: ": "有効期限: ", "접근 코드가 올바르지 않습니다.": "アクセスコードが正しくありません。", "이 코드는 취소되었습니다.": "このコードは無効化されました。", "이 코드는 만료되었습니다.": "このコードは期限切れです。", "이 브라우저에서는 코드를 확인할 수 없습니다. 최신 Chrome/Edge 에서 https 주소로 열어 주세요.": "このブラウザではコードを確認できません。最新のChrome/Edgeでhttpsアドレスを開いてください。", "로그인 설정(access-config.js)이 없어 잠겨 있습니다.": "ログイン設定(access-config.js)がないためロックされています。"}, "zh": {"접근 코드 입력": "输入访问码", "구독자에게 받은 접근 코드를 붙여 넣으세요.": "请粘贴你收到的访问码。", "입장": "进入", "로그아웃": "退出登录", "만료: ": "到期: ", "접근 코드가 올바르지 않습니다.": "访问码无效。", "이 코드는 취소되었습니다.": "此访问码已被撤销。", "이 코드는 만료되었습니다.": "此访问码已过期。", "이 브라우저에서는 코드를 확인할 수 없습니다. 최신 Chrome/Edge 에서 https 주소로 열어 주세요.": "此浏览器无法验证访问码。请在最新的 Chrome/Edge 中打开 https 地址。", "로그인 설정(access-config.js)이 없어 잠겨 있습니다.": "缺少登录设置(access-config.js),已锁定。"}, "es": {"접근 코드 입력": "Introduce el código de acceso", "구독자에게 받은 접근 코드를 붙여 넣으세요.": "Pega el código de acceso que recibiste.", "입장": "Entrar", "로그아웃": "Cerrar sesión", "만료: ": "Caduca: ", "접근 코드가 올바르지 않습니다.": "El código de acceso no es válido.", "이 코드는 취소되었습니다.": "Este código ha sido revocado.", "이 코드는 만료되었습니다.": "Este código ha caducado.", "이 브라우저에서는 코드를 확인할 수 없습니다. 최신 Chrome/Edge 에서 https 주소로 열어 주세요.": "Este navegador no puede verificar códigos. Abre la dirección https en un Chrome/Edge reciente.", "로그인 설정(access-config.js)이 없어 잠겨 있습니다.": "Bloqueado: falta la configuración de acceso (access-config.js)."}}).forEach(([l,o])=>{I18N[l]=Object.assign(I18N[l]||{},o);});
+</script>
+<script>
+/* Access gate. Active only when access-config.js defines ACCESS_CONFIG.publicKey.
+   Codes are signed (ECDSA P-256) by the owner's code maker; this page only holds the PUBLIC key,
+   so codes cannot be forged. Expiry is checked against the host's clock (Date header) when reachable. */
+Object.entries({'en': 'Unlimited', 'ja': '無期限', 'zh': '无限期', 'es': 'Sin límite'}).forEach(([l,o])=>{if(typeof I18N!=='undefined'){I18N[l]=Object.assign(I18N[l]||{},{'무제한':o});}});
+(function(){
+  const b64d=s=>{s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;};
+  const $=id=>document.getElementById(id);
+  let cfg=null,keyP=null;
+  async function nowSec(){
+    let n=Date.now();
+    try{const r=await fetch('access-config.js',{method:'HEAD',cache:'no-store'});const d=r.headers.get('date');
+      if(d){const sv=Date.parse(d);if(!isNaN(sv)&&Math.abs(sv-n)>5*60000)n=sv;}}catch(e){}
+    return Math.floor(n/1000);
+  }
+  async function check(code){
+    if(!(window.crypto&&crypto.subtle))return{err:t('이 브라우저에서는 코드를 확인할 수 없습니다. 최신 Chrome/Edge 에서 https 주소로 열어 주세요.')};
+    code=(code||'').replace(/\s+/g,'');
+    const m=/^SVM1-([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+)$/.exec(code);
+    if(!m)return{err:t('접근 코드가 올바르지 않습니다.')};
+    let pay,sig,data;
+    try{data=b64d(m[1]);sig=b64d(m[2]);pay=JSON.parse(new TextDecoder().decode(data));}catch(e){return{err:t('접근 코드가 올바르지 않습니다.')};}
+    try{
+      if(!keyP)keyP=crypto.subtle.importKey('jwk',cfg.publicKey,{name:'ECDSA',namedCurve:'P-256'},false,['verify']);
+      const ok=await crypto.subtle.verify({name:'ECDSA',hash:'SHA-256'},await keyP,sig,data);
+      if(!ok)return{err:t('접근 코드가 올바르지 않습니다.')};
+    }catch(e){return{err:t('접근 코드가 올바르지 않습니다.')};}
+    if(Array.isArray(cfg.revoked)&&cfg.revoked.includes(pay.i))return{err:t('이 코드는 취소되었습니다.')};
+    const n=await nowSec();
+    if(typeof pay.e!=='number'||(pay.e!==0&&n>=pay.e))return{err:t('이 코드는 만료되었습니다.')};
+    return{ok:true,pay};
+  }
+  let timer=null;
+  function open(pay,code){
+    try{localStorage.setItem('svm_access',code);}catch(e){}
+    $('gate').hidden=true;document.body.classList.add('svm-ok');
+    $('gateExp').textContent=pay.e===0?t('무제한'):t('만료: ')+new Date(pay.e*1000).toLocaleString();
+    $('gateBadge').hidden=false;
+    clearTimeout(timer);if(pay.e!==0)timer=setTimeout(lock,Math.max(1000,Math.min(2147483000,pay.e*1000-Date.now())));
+  }
+  function lock(){
+    try{localStorage.removeItem('svm_access');}catch(e){}
+    document.body.classList.remove('svm-ok');$('gateBadge').hidden=true;$('gate').hidden=false;$('gateCode').value='';$('gateErr').textContent='';
+  }
+  async function start(){
+    $('gateGo').onclick=async()=>{
+      const c=$('gateCode').value,r=await check(c);
+      if(r.ok)open(r.pay,c.replace(/\s+/g,''));else $('gateErr').textContent=r.err;
+    };
+    $('gateOut').onclick=lock;
+    applyLang();
+    let saved=null;try{saved=localStorage.getItem('svm_access');}catch(e){}
+    if(saved){const r=await check(saved);if(r.ok)return open(r.pay,saved);}
+    lock();
+  }
+  const sc=document.createElement('script');
+  sc.src='access-config.js';
+  sc.onload=()=>{cfg=window.ACCESS_CONFIG;$('gate').hidden=false;$('gateOut').onclick=lock;if(cfg&&cfg.publicKey){start();}else{$('gateErr').textContent=t('로그인 설정(access-config.js)이 없어 잠겨 있습니다.');$('gateGo').disabled=true;}};
+  sc.onerror=()=>{$('gate').hidden=false;$('gateErr').textContent=t('로그인 설정(access-config.js)이 없어 잠겨 있습니다.');$('gateGo').disabled=true;};
+  document.head.appendChild(sc);
+})();
+</script>
+
